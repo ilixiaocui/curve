@@ -174,6 +174,8 @@ class RequestScheduler : public Uncopyable {
     std::condition_variable leaseRefreshcv_;
     // 阻塞队列
     bool blockingQueue_;
+
+    FileMetric* fileMetric_ = nullptr;
 };
 
 }   // namespace client

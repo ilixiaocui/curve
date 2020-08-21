@@ -29,6 +29,8 @@
 #include "src/common/timeutility.h"
 #include "src/client/request_closure.h"
 #include "src/common/location_operator.h"
+#include <bvar/bvar.h>
+using curve::common::TimeUtility;
 
 namespace curve {
 namespace client {
@@ -40,6 +42,8 @@ using curve::chunkserver::GetChunkInfoRequest;
 using curve::chunkserver::GetChunkInfoResponse;
 using curve::common::TimeUtility;
 using ::google::protobuf::Closure;
+bvar::LatencyRecorder stub_write_call_lat("stub_write_call_lat");
+bvar::LatencyRecorder stub_read_call_lat("stub_read_call_lat");
 
 inline void RequestSender::UpdateRpcRPS(ClientClosure* done,
                                         OpType type) const {
@@ -104,8 +108,13 @@ int RequestSender::ReadChunk(const ChunkIDInfo& idinfo,
         request.set_appliedindex(appliedindex);
     }
 
+    auto startUs = curve::common::TimeUtility::GetTimeofDayUs();
+
     ChunkService_Stub stub(&channel_);
     stub.ReadChunk(cntl, &request, response, doneGuard.release());
+
+    stub_read_call_lat << (curve::common::TimeUtility::GetTimeofDayUs() -
+                           startUs);
 
     return 0;
 }
@@ -142,8 +151,14 @@ int RequestSender::WriteChunk(const ChunkIDInfo& idinfo,
     }
 
     cntl->request_attachment().append(data);
+
+    auto startUs = curve::common::TimeUtility::GetTimeofDayUs();
+
     ChunkService_Stub stub(&channel_);
     stub.WriteChunk(cntl, &request, response, doneGuard.release());
+
+    stub_write_call_lat << (curve::common::TimeUtility::GetTimeofDayUs() -
+                            startUs);
 
     return 0;
 }

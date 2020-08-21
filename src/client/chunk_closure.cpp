@@ -34,9 +34,13 @@
 #include "src/client/service_helper.h"
 #include "src/client/io_tracker.h"
 
+#include <bvar/bvar.h>
+
 // TODO(tongguangxun) :优化重试逻辑，将重试逻辑与RPC返回逻辑拆开
 namespace curve {
 namespace client {
+
+bvar::LatencyRecorder g_unstable_helper_clean_lat("unstable_helper_clean_lat");
 
 ClientClosure::BackoffParam  ClientClosure::backoffParam_;
 FailureRequestOption  ClientClosure::failReqOpt_;
@@ -51,7 +55,6 @@ void ClientClosure::PreProcessBeforeRetry(int rpcstatus, int cntlstatus) {
     // 对于一个请求来说，GetLeader仍然可能返回旧的Leader
     // rpc timeout时间可能会被设置成2s/4s，等到超时后再去获取leader信息
     // 为了尽快在新的Leader上重试请求，将rpc timeout时间设置为默认值
-    if (cntlstatus == brpc::ERPCTIMEDOUT || cntlstatus == ETIMEDOUT) {
         uint64_t nextTimeout = 0;
         uint64_t retriedTimes = reqDone->GetRetriedTimes();
         bool leaderMayChange = metaCache_->IsLeaderMayChange(
@@ -177,8 +180,11 @@ void ClientClosure::Run() {
         OnRpcFailed();
     } else {
         // 只要rpc正常返回，就清空超时计数器
+        auto startUs = curve::common::TimeUtility::GetTimeofDayUs();
         metaCache_->GetUnstableHelper().ClearTimeout(
             chunkserverID_, chunkserverEndPoint_);
+        g_unstable_helper_clean_lat
+            << (curve::common::TimeUtility::GetTimeofDayUs() - startUs);
 
         status_ = GetResponseStatus();
 

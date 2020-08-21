@@ -39,7 +39,10 @@ void RequestClosure::Run() {
 
 void RequestClosure::GetInflightRPCToken() {
     if (ioManager_ != nullptr) {
+        auto startUs = curve::common::TimeUtility::GetTimeofDayUs();
         ioManager_->GetInflightRpcToken();
+        metric_->getInflightTokenLatency
+            << (curve::common::TimeUtility::GetTimeofDayUs() - startUs);
         MetricHelper::IncremInflightRPC(metric_);
         ownInflight_ = true;
     }
@@ -47,7 +50,10 @@ void RequestClosure::GetInflightRPCToken() {
 
 void RequestClosure::ReleaseInflightRPCToken() {
     if (ioManager_ != nullptr && ownInflight_) {
+        auto startUs = curve::common::TimeUtility::GetTimeofDayUs();
         ioManager_->ReleaseInflightRpcToken();
+        metric_->releaseInflightTokenLatency
+            << (curve::common::TimeUtility::GetTimeofDayUs() - startUs);
         MetricHelper::DecremInflightRPC(metric_);
     }
 }

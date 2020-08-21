@@ -147,6 +147,9 @@ int IOTracker::ReadFromSource(const std::vector<RequestContext*>& reqCtxVec,
 void IOTracker::StartWrite(const void* buf, off_t offset, size_t length,
                            MDSClient* mdsclient, const FInfo_t* fileInfo) {
     data_ = const_cast<void*>(buf);
+    fileMetric_->userWriteStartSplitLatency
+        << (curve::common::TimeUtility::GetTimeofDayUs() - opStartTimePoint_);
+
     offset_ = offset;
     length_ = length;
     type_ = OpType::WRITE;
@@ -196,7 +199,11 @@ void IOTracker::DoWrite(MDSClient* mdsclient, const FInfo_t* fileInfo) {
             r->done_->SetFileMetric(fileMetric_);
             r->done_->SetIOManager(iomanager_);
             r->subIoIndex_ = subIoIndex++;
+            r->splitedUs_ = curve::common::TimeUtility::GetTimeofDayUs();
         });
+        fileMetric_->userWriteEndSplitLatency
+            << (curve::common::TimeUtility::GetTimeofDayUs() -
+                opStartTimePoint_);
         ret = scheduler_->ScheduleRequest(reqlist_);
     } else {
         LOG(ERROR) << "splitor write io failed, "
@@ -448,6 +455,10 @@ void IOTracker::Done() {
         errcode_ == LIBCURVE_ERROR::OK ? iocv_.Complete(length_)
                                        : iocv_.Complete(-errcode_);
         return;
+    }
+
+    if (type_ == OpType::WRITE) {
+        fileMetric_->userIOInflightNum << -1;
     }
 
     // 异步函数调用，在此处发起回调

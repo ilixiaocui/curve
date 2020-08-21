@@ -43,11 +43,14 @@
 #include <glog/logging.h>
 #include <inttypes.h>
 #include <netinet/in.h>
+#include <bvar/bvar.h>
 
 #include "nbd/src/util.h"
 
 namespace curve {
 namespace nbd {
+
+bvar::Adder<int64_t> nbd_ninprocess_io_num("nbd_ninprocess_io_num");
 
 #define REQUEST_TYPE_MASK 0x0000ffff
 
@@ -181,6 +184,7 @@ void NBDServer::ReaderFunc() {
                 disconnect = true;
                 break;
             case NBD_CMD_WRITE:
+                nbd_ninprocess_io_num << 1;
                 ctx->data.reset(new char[ctx->request.len]);
 
                 // 写请求，继续读取写入数据
@@ -248,6 +252,10 @@ void NBDServer::WriterFunc() {
                            << cpp_strerror(r);
                 return;
             }
+        }
+
+        if (ctx->command == NBD_CMD_WRITE) {
+            nbd_ninprocess_io_num << -1;
         }
     }
 

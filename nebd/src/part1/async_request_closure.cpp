@@ -27,9 +27,12 @@
 
 #include <algorithm>
 #include <memory>
+#include <bvar/bvar.h>
 
 namespace nebd {
 namespace client {
+
+extern bvar::Adder<int64_t> nebd_part1_inprocess_io_num;
 
 void AsyncRequestClosure::Run() {
     std::unique_ptr<AsyncRequestClosure> selfGuard(this);
@@ -56,6 +59,10 @@ void AsyncRequestClosure::Run() {
             if (aioCtx->op == LIBAIO_OP::LIBAIO_OP_READ) {
                 cntl.response_attachment().copy_to(
                     aioCtx->buf, cntl.response_attachment().size());
+            }
+
+            if (aioCtx->op == LIBAIO_OP::LIBAIO_OP_WRITE) {
+                nebd_part1_inprocess_io_num << -1;
             }
 
             aioCtx->ret = 0;

@@ -29,6 +29,8 @@
 #include "src/client/request_closure.h"
 #include "src/client/chunk_closure.h"
 
+#include <bvar/bvar.h>
+
 namespace curve {
 namespace client {
 
@@ -56,6 +58,8 @@ int RequestScheduler::Init(const RequestScheduleOption& reqSchdulerOpt,
     if (0 != rc) {
         return -1;
     }
+
+    fileMetric_ = fm;
 
     LOG(INFO) << "RequestScheduler conf info: "
               << "scheduleQueueCapacity = "
@@ -90,6 +94,9 @@ int RequestScheduler::ScheduleRequest(
     const std::vector<RequestContext*>& requests) {
     if (running_.load(std::memory_order_acquire)) {
         /* TODO(wudemiao): 后期考虑 qos */
+
+        auto startUs = curve::common::TimeUtility::GetTimeofDayUs();
+
         for (auto it : requests) {
             // skip the fake request
             if (!it->idinfo_.chunkExist) {
@@ -101,7 +108,18 @@ int RequestScheduler::ScheduleRequest(
 
             BBQItem<RequestContext *> req(it);
             queue_.PutBack(req);
+            if (fileMetric_) {
+                fileMetric_->subioPutLatency
+                    << (curve::common::TimeUtility::GetTimeofDayUs() -
+                        it->splitedUs_);
+            }
         }
+
+        if (fileMetric_) {
+            fileMetric_->putScheduleLatency << (
+                curve::common::TimeUtility::GetTimeofDayUs() - startUs);
+        }
+
         return 0;
     }
     return -1;
@@ -160,6 +178,7 @@ void RequestScheduler::Process() {
 }
 
 void RequestScheduler::ProcessOne(RequestContext* ctx) {
+        auto startUs = curve::common::TimeUtility::GetTimeofDayUs();
     brpc::ClosureGuard guard(ctx->done_);
 
     switch (ctx->optype_) {
@@ -170,10 +189,24 @@ void RequestScheduler::ProcessOne(RequestContext* ctx) {
                               ctx->sourceInfo_, guard.release());
             break;
         case OpType::WRITE:
+                        if (fileMetric_) {
+                            fileMetric_->subioTakeLatency
+                                << (curve::common::TimeUtility::
+                                        GetTimeofDayUs() -
+                                    req->splitedUs_);
+                        }
             ctx->done_->GetInflightRPCToken();
+                        auto startUs =
+                            curve::common::TimeUtility::GetTimeofDayUs();
             client_.WriteChunk(ctx->idinfo_, ctx->seq_, ctx->writeData_,
                                ctx->offset_, ctx->rawlength_, ctx->sourceInfo_,
                                guard.release());
+                        if (fileMetric_) {
+                            fileMetric_->copysetWriteChunkLatency
+                                << (curve::common::TimeUtility::
+                                        GetTimeofDayUs() -
+                                    startUs);
+                        }
             break;
         case OpType::READ_SNAP:
             client_.ReadChunkSnapshot(ctx->idinfo_, ctx->seq_, ctx->offset_,
@@ -200,6 +233,10 @@ void RequestScheduler::ProcessOne(RequestContext* ctx) {
             ctx->done_->SetFailed(-1);
             LOG(ERROR) << "unknown op type: OpType::UNKNOWN";
     }
+            if (fileMetric_) {
+                fileMetric_->scheduleLoopLatency << (
+                    curve::common::TimeUtility::GetTimeofDayUs() - startUs);
+            }
 }
 
 }   // namespace client

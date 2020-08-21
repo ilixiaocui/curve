@@ -190,6 +190,7 @@ int IOManager4File::AioRead(CurveAioContext* ctx, MDSClient* mdsclient,
 int IOManager4File::AioWrite(CurveAioContext* ctx, MDSClient* mdsclient,
                              UserDataType dataType) {
     MetricHelper::IncremUserRPSCount(fileMetric_, OpType::WRITE);
+    fileMetric_->userIOInflightNum << 1;
 
     IOTracker* temp = new (std::nothrow)
         IOTracker(this, &mc_, scheduler_, fileMetric_, disableStripe_);

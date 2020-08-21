@@ -252,17 +252,25 @@ int CopysetClient::DoRPCTask(const ChunkIDInfo& idinfo,
     while (reqclosure->GetRetriedTimes() <
         iosenderopt_.failRequestOpt.chunkserverOPMaxRetry) {
         reqclosure->IncremRetriedTimes();
+        auto fetchLeaderStartUs = curve::common::TimeUtility::GetTimeofDayUs();
         if (false == FetchLeader(idinfo.lpid_, idinfo.cpid_,
             &leaderId, &leaderAddr)) {
             bthread_usleep(
             iosenderopt_.failRequestOpt.chunkserverOPRetryIntervalUS);
             continue;
+        } else {
+            fileMetric_->fetchLeaderLatency
+                << curve::common::TimeUtility::GetTimeofDayUs() -
+                       fetchLeaderStartUs;
         }
 
         auto senderPtr = senderManager_->GetOrCreateSender(leaderId,
                                         leaderAddr, iosenderopt_);
         if (nullptr != senderPtr) {
+            auto startSenderUs = curve::common::TimeUtility::GetTimeofDayUs();
             task(doneGuard.release(), senderPtr);
+            fileMetric_->senderLatency
+                << curve::common::TimeUtility::GetTimeofDayUs() - startSenderUs;
             break;
         } else {
             LOG(WARNING) << "create or reset sender failed, "

@@ -22,6 +22,7 @@
 
 #include <brpc/closure_guard.h>
 #include <brpc/controller.h>
+#include <bvar/bvar.h>
 
 #include <butil/iobuf.h>
 
@@ -39,8 +40,11 @@ using nebd::client::RetCode;
 static bool pass_bool(const char*, bool) { return true; }
 DEFINE_bool(dropRpc, false, "drop the request rpc");
 DEFINE_validator(dropRpc, &pass_bool);
+bvar::Adder<int64_t> g_ninprocess("nebd_inprocess_io_num");
 
 void SetResponse(NebdServerAioContext* context, RetCode retCode) {
+
+void NebdFileServiceCallback(NebdServerAioContext* context) {
     switch (context->op) {
         case LIBAIO_OP::LIBAIO_OP_READ:
         {
@@ -58,6 +62,7 @@ void SetResponse(NebdServerAioContext* context, RetCode retCode) {
         }
         case LIBAIO_OP::LIBAIO_OP_WRITE:
         {
+            g_ninprocess << -1;
             nebd::client::WriteResponse* response =
                 dynamic_cast<nebd::client::WriteResponse*>(context->response);
             response->set_retcode(retCode);
@@ -141,6 +146,8 @@ void NebdFileServiceImpl::Write(
     google::protobuf::Closure* done) {
     brpc::ClosureGuard doneGuard(done);
     response->set_retcode(RetCode::kNoOK);
+
+    g_ninprocess << 1;
 
     NebdServerAioContext* aioContext
         = new (std::nothrow) NebdServerAioContext();

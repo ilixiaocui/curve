@@ -102,6 +102,8 @@ struct FileMetric {
     // 当前文件inflight io数量
     bvar::Adder<int64_t> inflightRPCNum;
 
+    bvar::Adder<int64_t> userIOInflightNum;
+
     // 当前文件请求的最大请求字节数，这种统计方式可以很方便的看到最大值，分位值
     bvar::LatencyRecorder readSizeRecorder;
     bvar::LatencyRecorder writeSizeRecorder;
@@ -120,6 +122,45 @@ struct FileMetric {
     // 当前文件上的悬挂IO数量
     IOSuspendMetric suspendRPCMetric;
 
+    // 用户写请求开始拆分延迟
+    bvar::LatencyRecorder userWriteStartSplitLatency;
+
+    // 用户读请求开始拆分延迟
+    bvar::LatencyRecorder userReadStartSplitLatency;
+
+    // 用户写请求结束拆分延迟
+    bvar::LatencyRecorder userWriteEndSplitLatency;
+
+    // 用户读请求结束拆分延迟
+    bvar::LatencyRecorder userReadEndSplitLatency;
+
+    // fetch leader latency
+    bvar::LatencyRecorder fetchLeaderLatency;
+
+    // sender latency
+    bvar::LatencyRecorder senderLatency;
+
+    // get inflight token
+    bvar::LatencyRecorder getInflightTokenLatency;
+
+    // release inflight token
+    bvar::LatencyRecorder releaseInflightTokenLatency;
+
+    // subio take latency
+    bvar::LatencyRecorder subioTakeLatency;
+
+    // subio put latency
+    bvar::LatencyRecorder subioPutLatency;
+
+    // copyset client write latency
+    bvar::LatencyRecorder copysetWriteChunkLatency;
+
+    // schedule latency
+    bvar::LatencyRecorder putScheduleLatency;
+
+    // schedule run latency
+    bvar::LatencyRecorder scheduleLoopLatency;
+
     explicit FileMetric(const std::string& name)
         : filename(name),
           inflightRPCNum(prefix, filename + "_inflight_rpc_num"),
@@ -131,6 +172,26 @@ struct FileMetric {
           userWrite(prefix, filename + "_write"),
           getLeaderRetryQPS(prefix, filename + "_get_leader_retry_rpc"),
           suspendRPCMetric(prefix, filename + "_suspend_io_num") {}
+          inflightRPCNum(prefix, filename + "_inflight_rpc_num"),
+          userIOInflightNum(prefix, filename + "_uesr_inflight_io_num"),
+          getLeaderRetryQPS(prefix, filename + "_get_leader_retry_rpc"),
+          writeSizeRecorder(prefix, filename + "_write_request_size_recoder"),
+          readSizeRecorder(prefix, filename + "_read_request_size_recoder"),
+          suspendRPCMetric(prefix, filename + "_suspend_io_num"),
+          userWriteStartSplitLatency(prefix, filename + "_user_write_start_split_lat"),
+          userReadStartSplitLatency(prefix, filename + "_user_read_start_split_lat"),
+          userWriteEndSplitLatency(prefix, filename + "_user_write_end_split_lat"),
+          userReadEndSplitLatency(prefix, filename + "_user_read_end_split_lat"),
+          fetchLeaderLatency(prefix, filename + "_fetch_leader_lat"),
+          senderLatency(prefix, filename + "_sender_lat"),
+          getInflightTokenLatency(prefix, filename + "_get_inflight_token_lat"),
+          releaseInflightTokenLatency(prefix, filename + "_release_inflight_token_lat"),
+          subioTakeLatency(prefix, filename + "_subio_take_lat"),
+          subioPutLatency(prefix, filename + "_subio_put_lat"),
+          copysetWriteChunkLatency(prefix, filename + "_copyset_write_chunk_lat"),
+          putScheduleLatency(prefix, filename + "_put_schedule_lat"),
+          scheduleLoopLatency(prefix, filename + "_schedule_loop_lat")
+           {}
 };
 
 // 用于全局mds接口统计信息调用信息统计

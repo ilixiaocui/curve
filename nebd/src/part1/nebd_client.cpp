@@ -30,6 +30,8 @@
 #include <gflags/gflags.h>
 #include <bthread/bthread.h>
 #include <string>
+#include <brpc/server.h>
+#include <bvar/bvar.h>
 
 #include "nebd/src/part1/async_request_closure.h"
 #include "nebd/src/common/configuration.h"
@@ -50,6 +52,8 @@ namespace brpc {
 
 namespace nebd {
 namespace client {
+
+bvar::Adder<int64_t> nebd_part1_inprocess_io_num("nebd_part1_inprocess_io_num");
 
 using nebd::common::FileLock;
 
@@ -358,6 +362,7 @@ int NebdClient::AioWrite(int fd, NebdClientAioContext* aioctx) {
 
         AioWriteClosure* done = new(std::nothrow) AioWriteClosure(
             fd, aioctx, option_.requestOption);
+        nebd_part1_inprocess_io_num << 1;
 
         done->cntl.set_timeout_ms(-1);
         done->cntl.set_log_id(logId_.fetch_add(1, std::memory_order_relaxed));
