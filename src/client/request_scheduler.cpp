@@ -183,17 +183,34 @@ void RequestScheduler::ProcessOne(RequestContext* ctx) {
 
     switch (ctx->optype_) {
         case OpType::READ:
-            ctx->done_->GetInflightRPCToken();
-            client_.ReadChunk(ctx->idinfo_, ctx->seq_, ctx->offset_,
-                              ctx->rawlength_, ctx->appliedindex_,
-                              ctx->sourceInfo_, guard.release());
-            break;
-        case OpType::WRITE:
+		{
                         if (fileMetric_) {
                             fileMetric_->subioTakeLatency
                                 << (curve::common::TimeUtility::
                                         GetTimeofDayUs() -
-                                    req->splitedUs_);
+                                    ctx->splitedUs_);
+                        }
+            ctx->done_->GetInflightRPCToken();
+                        auto startUs =
+                            curve::common::TimeUtility::GetTimeofDayUs();
+            client_.ReadChunk(ctx->idinfo_, ctx->seq_, ctx->offset_,
+                              ctx->rawlength_, ctx->appliedindex_,
+                              ctx->sourceInfo_, guard.release());
+                        if (fileMetric_) {
+                            fileMetric_->copysetReadChunkLatency
+                                << (curve::common::TimeUtility::
+                                        GetTimeofDayUs() -
+                                    startUs);
+                        }
+            break;
+		}
+        case OpType::WRITE:
+		{
+                        if (fileMetric_) {
+                            fileMetric_->subioTakeLatency
+                                << (curve::common::TimeUtility::
+                                        GetTimeofDayUs() -
+                                    ctx->splitedUs_);
                         }
             ctx->done_->GetInflightRPCToken();
                         auto startUs =
@@ -208,6 +225,7 @@ void RequestScheduler::ProcessOne(RequestContext* ctx) {
                                     startUs);
                         }
             break;
+		}
         case OpType::READ_SNAP:
             client_.ReadChunkSnapshot(ctx->idinfo_, ctx->seq_, ctx->offset_,
                                       ctx->rawlength_, guard.release());

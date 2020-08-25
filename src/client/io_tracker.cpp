@@ -65,6 +65,8 @@ IOTracker::IOTracker(IOManager* iomanager,
 
 void IOTracker::StartRead(void* buf, off_t offset, size_t length,
                           MDSClient* mdsclient, const FInfo_t* fileInfo) {
+    fileMetric_->userReadStartSplitLatency
+        << (curve::common::TimeUtility::GetTimeofDayUs() - opStartTimePoint_);
     data_ = buf;
     offset_ = offset;
     length_ = length;
@@ -114,6 +116,7 @@ void IOTracker::DoRead(MDSClient* mdsclient, const FInfo_t* fileInfo) {
             r->done_->SetFileMetric(fileMetric_);
             r->done_->SetIOManager(iomanager_);
             r->subIoIndex_ = subIoIndex++;
+            r->splitedUs_ = curve::common::TimeUtility::GetTimeofDayUs();
         });
 
         reqcount_.store(reqlist_.size(), std::memory_order_release);
@@ -123,6 +126,9 @@ void IOTracker::DoRead(MDSClient* mdsclient, const FInfo_t* fileInfo) {
         } else {
             ret = -1;
         }
+        fileMetric_->userReadEndSplitLatency
+            << (curve::common::TimeUtility::GetTimeofDayUs() -
+                opStartTimePoint_);
     } else {
         LOG(ERROR) << "splitor read io failed, "
                    << "offset = " << offset_ << ", length = " << length_;
@@ -201,10 +207,10 @@ void IOTracker::DoWrite(MDSClient* mdsclient, const FInfo_t* fileInfo) {
             r->subIoIndex_ = subIoIndex++;
             r->splitedUs_ = curve::common::TimeUtility::GetTimeofDayUs();
         });
+        ret = scheduler_->ScheduleRequest(reqlist_);
         fileMetric_->userWriteEndSplitLatency
             << (curve::common::TimeUtility::GetTimeofDayUs() -
                 opStartTimePoint_);
-        ret = scheduler_->ScheduleRequest(reqlist_);
     } else {
         LOG(ERROR) << "splitor write io failed, "
                    << "offset = " << offset_ << ", length = " << length_;

@@ -30,6 +30,7 @@
 #include "src/client/config_info.h"
 #include "src/common/concurrent/rw_lock.h"
 #include "src/common/uncopyable.h"
+#include "src/common/concurrent/rw_lock.h"
 
 namespace curve {
 namespace client {

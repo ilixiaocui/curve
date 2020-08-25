@@ -40,6 +40,13 @@
 #include "src/client/request_scheduler.h"
 #include "src/common/concurrent/concurrent.h"
 #include "src/common/concurrent/task_thread_pool.h"
+#include "include/curve_compiler_specific.h"
+#include "src/client/inflight_controller.h"
+
+#include <bthread/execution_queue.h>
+#include <functional>
+
+using curve::common::Atomic;
 
 namespace curve {
 namespace client {

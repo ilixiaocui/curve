@@ -299,6 +299,7 @@ uint64_t MetaCache::GetAppliedIndex(LogicPoolID logicPoolId,
         return 0;
     }
 
+    // move out lock
     return iter->second.GetAppliedIndex();
 }
 

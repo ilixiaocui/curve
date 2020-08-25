@@ -41,6 +41,7 @@ namespace curve {
 namespace client {
 
 bvar::LatencyRecorder g_unstable_helper_clean_lat("unstable_helper_clean_lat");
+bvar::LatencyRecorder g_closure_run_lat("closure_run_lat");
 
 ClientClosure::BackoffParam  ClientClosure::backoffParam_;
 FailureRequestOption  ClientClosure::failReqOpt_;
@@ -55,6 +56,8 @@ void ClientClosure::PreProcessBeforeRetry(int rpcstatus, int cntlstatus) {
     // 对于一个请求来说，GetLeader仍然可能返回旧的Leader
     // rpc timeout时间可能会被设置成2s/4s，等到超时后再去获取leader信息
     // 为了尽快在新的Leader上重试请求，将rpc timeout时间设置为默认值
+    if (cntlstatus == brpc::ERPCTIMEDOUT || cntlstatus == ETIMEDOUT) {
+
         uint64_t nextTimeout = 0;
         uint64_t retriedTimes = reqDone->GetRetriedTimes();
         bool leaderMayChange = metaCache_->IsLeaderMayChange(
@@ -161,6 +164,7 @@ uint64_t ClientClosure::TimeoutBackOff(uint64_t currentRetryTimes) {
 // 针对不同的请求类型和返回状态码，进行相应的处理
 // 各子类需要实现SendRetryRequest，进行重试请求
 void ClientClosure::Run() {
+    curve::common::ExpiredTime calcTime;
     std::unique_ptr<ClientClosure> selfGuard(this);
     std::unique_ptr<brpc::Controller> cntlGuard(cntl_);
     brpc::ClosureGuard doneGuard(done_);
@@ -179,6 +183,8 @@ void ClientClosure::Run() {
         needRetry = true;
         OnRpcFailed();
     } else {
+        fileMetric_->rpcControllerLatency << cntl_->latency_us();
+
         // 只要rpc正常返回，就清空超时计数器
         auto startUs = curve::common::TimeUtility::GetTimeofDayUs();
         metaCache_->GetUnstableHelper().ClearTimeout(
@@ -259,6 +265,11 @@ void ClientClosure::Run() {
         doneGuard.release();
         OnRetry();
     }
+
+    // g_closure_run_lat << (
+    //     static_cast<int64_t>(calcTime.ExpiredUs()));
+    fileMetric_->closureRunLatency << (
+        static_cast<int64_t>(calcTime.ExpiredUs()));
 }
 
 void ClientClosure::OnRpcFailed() {
@@ -503,7 +514,10 @@ void ReadChunkClosure::SendRetryRequest() {
 void ReadChunkClosure::OnSuccess() {
     ClientClosure::OnSuccess();
 
+    auto startUs = curve::common::TimeUtility::GetTimeofDayUs();
     reqCtx_->readData_ = cntl_->response_attachment();
+    fileMetric_->copyReadDataLatency << (
+        curve::common::TimeUtility::GetTimeofDayUs() - startUs);
 
     metaCache_->UpdateAppliedIndex(
         reqCtx_->idinfo_.lpid_,
@@ -515,7 +529,12 @@ void ReadChunkClosure::OnChunkNotExist() {
     ClientClosure::OnChunkNotExist();
 
     reqDone_->SetFailed(0);
+
+    auto startUs = curve::common::TimeUtility::GetTimeofDayUs();
     reqCtx_->readData_.resize(reqCtx_->rawlength_, 0);
+    fileMetric_->setReadDataLatency << (
+        curve::common::TimeUtility::GetTimeofDayUs() - startUs);
+
     metaCache_->UpdateAppliedIndex(chunkIdInfo_.lpid_, chunkIdInfo_.cpid_,
                                    response_->appliedindex());
 }

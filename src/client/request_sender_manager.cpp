@@ -74,5 +74,5 @@ void RequestSenderManager::ResetSenderIfNotHealth(const ChunkServerID& csId) {
     senderPool_.erase(iter);
 }
 
-}   // namespace client
-}   // namespace curve
+}  // namespace client
+}  // namespace curve

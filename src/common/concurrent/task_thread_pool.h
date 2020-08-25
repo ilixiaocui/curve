@@ -37,8 +37,12 @@
 
 #include "src/common/uncopyable.h"
 
+#include <bvar/bvar.h>
+
 namespace curve {
 namespace common {
+
+extern bvar::Adder<int64_t> taskNum;
 
 // 异步运行回调的线程池
 template <typename MutexT = std::mutex,

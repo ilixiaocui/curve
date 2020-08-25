@@ -47,11 +47,14 @@ bool TopologyStorageEtcd::LoadLogicalPool(
     }
     for (int i = 0; i < out.size(); i++) {
         LogicalPool data;
+	        LOG(INFO) << "check status: " << data.GetStatus();
+
         errCode = codec_->DecodeLogicalPoolData(out[i], &data);
         if (!errCode) {
             LOG(ERROR) << "DecodeLogicalPoolData err";
             return false;
         }
+	        LOG(INFO) << "check status: " << data.GetStatus();
         LogicalPoolIdType id = data.GetId();
         auto ret = logicalPoolMap->emplace(id, std::move(data));
         if (!ret.second) {

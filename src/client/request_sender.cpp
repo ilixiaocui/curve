@@ -29,6 +29,7 @@
 #include "src/common/timeutility.h"
 #include "src/client/request_closure.h"
 #include "src/common/location_operator.h"
+
 #include <bvar/bvar.h>
 using curve::common::TimeUtility;
 
@@ -73,6 +74,7 @@ int RequestSender::Init(const IOSenderOption& ioSenderOpt) {
     }
     iosenderopt_ = ioSenderOpt;
     ClientClosure::SetFailureRequestOption(iosenderopt_.failRequestOpt);
+
 
     return 0;
 }
@@ -154,8 +156,17 @@ int RequestSender::WriteChunk(const ChunkIDInfo& idinfo,
 
     auto startUs = curve::common::TimeUtility::GetTimeofDayUs();
 
+    // doneGuard.release();
+    // RpcTask task = [this, cntl, request, response, done]() {
     ChunkService_Stub stub(&channel_);
     stub.WriteChunk(cntl, &request, response, doneGuard.release());
+    // };
+
+    // int ret = bthread::execution_queue_execute(write_rpc_queue_id_, task);
+    // if (ret != 0) {
+        // LOG(FATAL) << "push failed, " << errno;
+        // _exit(0);
+    // }
 
     stub_write_call_lat << (curve::common::TimeUtility::GetTimeofDayUs() -
                             startUs);

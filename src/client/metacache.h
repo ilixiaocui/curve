@@ -239,12 +239,13 @@ class MetaCache {
      */
     virtual CopysetInfo GetCopysetinfo(LogicPoolID lpid, CopysetID csid);
 
-    UnstableHelper& GetUnstableHelper() {
-        return unstableHelper_;
-    }
 
     uint64_t InodeId() const {
         return fileInfo_.id;
+    }
+
+    UnstableHelper& GetUnstableHelper() {
+        return unstableHelper_;
     }
 
  private:
@@ -295,7 +296,10 @@ class MetaCache {
     // 三个读写锁分别保护上述三个映射表
     CURVE_CACHELINE_ALIGNMENT RWLock    rwlock4chunkInfoMap_;
     CURVE_CACHELINE_ALIGNMENT RWLock    rwlock4ChunkInfo_;
-    CURVE_CACHELINE_ALIGNMENT RWLock    rwlock4CopysetInfo_;
+    // CURVE_CACHELINE_ALIGNMENT curve::common::BthreadRWLock rwlock4ChunkInfo_;
+    // CURVE_CACHELINE_ALIGNMENT RWLock    rwlock4CopysetInfo_;
+
+    CURVE_CACHELINE_ALIGNMENT curve::common::BthreadRWLock rwlock4CopysetInfo_;
 
     // chunkserverCopysetIDMap_存放当前chunkserver到copyset的映射
     // 当rpc closure设置SetChunkserverUnstable时，会设置该chunkserver

@@ -70,7 +70,7 @@ TEST_F(TestTopologyStorageEtcd, test_LoadLogicalPool_success) {
     LogicalPool data(0x11, "lpool", 0x21, LogicalPoolType::PAGEFILE,
         rap, policy, 100, true);
     data.SetScatterWidth(100);
-    data.SetStatus(AllocateStatus::ALLOW);
+    data.SetStatus(AllocateStatus::DENY);
 
     std::string key = codec_->EncodeLogicalPoolKey(data.GetId());
     std::string value;
@@ -89,6 +89,8 @@ TEST_F(TestTopologyStorageEtcd, test_LoadLogicalPool_success) {
     ASSERT_EQ(1, logicalPoolMap.size());
     ASSERT_TRUE(JudgeLogicalPoolEqual(data, logicalPoolMap[0x11]));
     ASSERT_EQ(0x11, maxLogicalPoolId);
+        LOG(INFO) << data.GetStatus() << " " << logicalPoolMap[0x11].GetStatus();
+
 }
 
 TEST_F(TestTopologyStorageEtcd, test_LoadLogicalPool_success_ListEtcdEmpty) {
@@ -880,7 +882,30 @@ TEST_F(TestTopologyStorageEtcd, test_StotageClusterInfo_fail) {
 
 
 
+TEST_F(TestTopologyStorageEtcd, test_real_etcd) {
+    EtcdConf etcdConf;
+    std::string endpoint(
+        "10.182.14.24:2379");
+    etcdConf.Endpoints = new char[endpoint.size()];
+    std::memcpy(etcdConf.Endpoints, endpoint.c_str(), endpoint.size());
+    etcdConf.len = endpoint.size();
+    etcdConf.DialTimeout = 10000;
 
+    std::shared_ptr<EtcdClientImp> etcdclient = std::make_shared<EtcdClientImp>();
+    auto res = etcdclient->Init(etcdConf, 10000, 10);
+    ASSERT_EQ(res, EtcdErrCode::EtcdOK);
+
+
+    auto codec = std::make_shared<TopologyStorageCodec>();
+    auto topologyStorage =
+        std::make_shared<TopologyStorageEtcd>(etcdclient, codec);
+
+    std::unordered_map<PoolIdType, LogicalPool> logicalPoolMap;
+    PoolIdType maxLogicalPoolId;
+    bool ret =
+        topologyStorage->LoadLogicalPool(&logicalPoolMap, &maxLogicalPoolId);
+    ASSERT_TRUE(ret);
+}
 
 
 

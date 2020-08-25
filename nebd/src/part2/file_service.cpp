@@ -43,8 +43,6 @@ DEFINE_validator(dropRpc, &pass_bool);
 bvar::Adder<int64_t> g_ninprocess("nebd_inprocess_io_num");
 
 void SetResponse(NebdServerAioContext* context, RetCode retCode) {
-
-void NebdFileServiceCallback(NebdServerAioContext* context) {
     switch (context->op) {
         case LIBAIO_OP::LIBAIO_OP_READ:
         {

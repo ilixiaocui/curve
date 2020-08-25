@@ -28,6 +28,10 @@
 #include "src/common/concurrent/count_down_event.h"
 #include "src/common/concurrent/task_thread_pool.h"
 
+#include "src/common/timeutility.h"
+
+#include <bvar/bvar.h>
+
 namespace curve {
 namespace common {
 
@@ -264,6 +268,7 @@ TEST(TaskThreadPool, basic) {
         taskThreadPool.Stop();
     }
 }
+
 
 }  // namespace common
 }  // namespace curve

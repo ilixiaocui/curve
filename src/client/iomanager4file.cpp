@@ -30,6 +30,9 @@
 #include "src/client/io_tracker.h"
 #include "src/client/splitor.h"
 
+#include <bvar/bvar.h>
+#include <bthread/execution_queue.h>
+
 namespace curve {
 namespace client {
 Atomic<uint64_t> IOManager::idRecorder_(1);
@@ -84,6 +87,7 @@ bool IOManager4File::Initialize(const std::string& filename,
               << ioopt_.taskThreadOpt.isolationTaskThreadPoolSize
               << ", isolationTaskQueueCapacity = "
               << ioopt_.taskThreadOpt.isolationTaskQueueCapacity;
+
     return true;
 }
 
@@ -183,7 +187,11 @@ int IOManager4File::AioRead(CurveAioContext* ctx, MDSClient* mdsclient,
         temp->StartAioRead(ctx, mdsclient, this->GetFileInfo());
     };
 
+    auto startUs = curve::common::TimeUtility::GetTimeofDayUs();
     taskPool_.Enqueue(task);
+    fileMetric_->enqueueLatency
+        << (curve::common::TimeUtility::GetTimeofDayUs() - startUs);
+
     return LIBCURVE_ERROR::OK;
 }
 
@@ -207,7 +215,13 @@ int IOManager4File::AioWrite(CurveAioContext* ctx, MDSClient* mdsclient,
         temp->StartAioWrite(ctx, mdsclient, this->GetFileInfo());
     };
 
+
+    auto startUs = curve::common::TimeUtility::GetTimeofDayUs();
     taskPool_.Enqueue(task);
+
+    fileMetric_->enqueueLatency
+        << (curve::common::TimeUtility::GetTimeofDayUs() - startUs);
+
     return LIBCURVE_ERROR::OK;
 }
 

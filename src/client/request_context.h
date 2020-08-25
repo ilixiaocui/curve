@@ -123,6 +123,7 @@ struct CURVE_CACHELINE_ALIGNMENT RequestContext {
             return nullptr;
         }
     }
+    uint64_t splitedUs_;
 
  private:
     static std::atomic<uint64_t> requestId;
@@ -132,7 +133,6 @@ struct CURVE_CACHELINE_ALIGNMENT RequestContext {
         return requestId.fetch_add(1, std::memory_order_relaxed);
     }
     static std::atomic<uint64_t> reqCtxID_;
-    uint64_t splitedUs_;
 };
 
 inline std::ostream& operator<<(std::ostream& os,

@@ -155,11 +155,25 @@ struct FileMetric {
     // copyset client write latency
     bvar::LatencyRecorder copysetWriteChunkLatency;
 
+    // copyset client read latency
+    bvar::LatencyRecorder copysetReadChunkLatency;
+
     // schedule latency
     bvar::LatencyRecorder putScheduleLatency;
 
     // schedule run latency
     bvar::LatencyRecorder scheduleLoopLatency;
+
+    // ChunkClosure run latency
+    bvar::LatencyRecorder closureRunLatency;
+
+    bvar::LatencyRecorder rpcControllerLatency;
+
+    bvar::LatencyRecorder copyReadDataLatency;
+
+    bvar::LatencyRecorder setReadDataLatency;
+
+    bvar::LatencyRecorder enqueueLatency;
 
     explicit FileMetric(const std::string& name)
         : filename(name),
@@ -171,13 +185,8 @@ struct FileMetric {
           userRead(prefix, filename + "_read"),
           userWrite(prefix, filename + "_write"),
           getLeaderRetryQPS(prefix, filename + "_get_leader_retry_rpc"),
-          suspendRPCMetric(prefix, filename + "_suspend_io_num") {}
-          inflightRPCNum(prefix, filename + "_inflight_rpc_num"),
-          userIOInflightNum(prefix, filename + "_uesr_inflight_io_num"),
-          getLeaderRetryQPS(prefix, filename + "_get_leader_retry_rpc"),
-          writeSizeRecorder(prefix, filename + "_write_request_size_recoder"),
-          readSizeRecorder(prefix, filename + "_read_request_size_recoder"),
           suspendRPCMetric(prefix, filename + "_suspend_io_num"),
+          userIOInflightNum(prefix, filename + "_uesr_inflight_io_num"),
           userWriteStartSplitLatency(prefix, filename + "_user_write_start_split_lat"),
           userReadStartSplitLatency(prefix, filename + "_user_read_start_split_lat"),
           userWriteEndSplitLatency(prefix, filename + "_user_write_end_split_lat"),
@@ -189,8 +198,14 @@ struct FileMetric {
           subioTakeLatency(prefix, filename + "_subio_take_lat"),
           subioPutLatency(prefix, filename + "_subio_put_lat"),
           copysetWriteChunkLatency(prefix, filename + "_copyset_write_chunk_lat"),
+          copysetReadChunkLatency(prefix, filename + "_copyset_read_chunk_lat"),
           putScheduleLatency(prefix, filename + "_put_schedule_lat"),
-          scheduleLoopLatency(prefix, filename + "_schedule_loop_lat")
+          scheduleLoopLatency(prefix, filename + "_schedule_loop_lat"),
+          closureRunLatency(prefix, filename + "_closure_run_lat"),
+          rpcControllerLatency(prefix, filename + "_rpc_cntl_lat"),
+          copyReadDataLatency(prefix, filename + "_copy_read_data_lat"),
+          setReadDataLatency(prefix, filename + "_set_read_data_lat"),
+          enqueueLatency(prefix, filename + "_enqueue_lat")
            {}
 };
 
