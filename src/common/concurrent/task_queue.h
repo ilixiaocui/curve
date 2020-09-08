@@ -22,6 +22,7 @@
 
 #ifndef SRC_COMMON_CONCURRENT_TASK_QUEUE_H_
 #define SRC_COMMON_CONCURRENT_TASK_QUEUE_H_
+#include <bvar/bvar.h>
 
 #include <future>       // NOLINT
 #include <queue>        // NOLINT
@@ -36,6 +37,8 @@ class TaskQueue {
  public:
     using Task = std::function<void()>;
     explicit TaskQueue(size_t capacity): capacity_(capacity) {
+        taskQueueSize_.expose_as(
+            "task_queue_size_", std::to_string((uint64_t)this));
     }
 
     ~TaskQueue() = default;
@@ -46,6 +49,7 @@ class TaskQueue {
         std::unique_lock<std::mutex> lk(mtx_);
         notfullcv_.wait(lk, [this]()->bool{return this->tasks_.size() < this->capacity_;});     // NOLINT
         tasks_.push(task);
+        taskQueueSize_ << 1;
         notemptycv_.notify_one();
     };                                                                                          // NOLINT
 
@@ -54,6 +58,7 @@ class TaskQueue {
         notemptycv_.wait(lk, [this]()->bool{return this->tasks_.size() > 0;});                  // NOLINT
         Task t = tasks_.front();
         tasks_.pop();
+        taskQueueSize_ << -1;
         notfullcv_.notify_one();
         return t;
     }
@@ -64,6 +69,7 @@ class TaskQueue {
     std::condition_variable notemptycv_;
     std::condition_variable notfullcv_;
     std::queue< Task > tasks_;
+    bvar::Adder<uint32_t> taskQueueSize_;
 };
 
 }   // namespace common

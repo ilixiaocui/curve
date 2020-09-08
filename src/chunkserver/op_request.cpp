@@ -35,6 +35,20 @@
 #include "src/chunkserver/clone_manager.h"
 #include "src/chunkserver/clone_task.h"
 
+static bvar::LatencyRecorder g_oprequest_leader_writechunk_latency(
+                                    "oprequest_leader_write_chunk");
+static bvar::LatencyRecorder g_oprequest_follower_writechunk_latency(
+                                    "oprequest_follower_write_chunk");
+
+static bvar::LatencyRecorder g_oprequest_writechunk_latency(
+                                    "oprequest_write_chunk");
+
+static bvar::LatencyRecorder g_concurrent_apply_queue_latency(
+                                    "concurrent_apply_queue");
+
+static bvar::LatencyRecorder g_oprequest_propose_latency(
+                                    "oprequest_propose");
+
 namespace curve {
 namespace chunkserver {
 
@@ -74,6 +88,8 @@ void ChunkOpRequest::Process() {
 
 int ChunkOpRequest::Propose(const ChunkRequest *request,
                             const butil::IOBuf *data) {
+    timer.start();
+    timer3.start();
     // 检查任期和自己是不是Leader
     if (!node_->IsLeaderTerm()) {
         RedirectChunkRequest();
@@ -99,6 +115,8 @@ int ChunkOpRequest::Propose(const ChunkRequest *request,
 
     node_->Propose(task);
 
+    timer3.stop();
+    g_oprequest_propose_latency << timer3.u_elapsed();
     return 0;
 }
 
@@ -437,6 +455,13 @@ void ReadChunkRequest::ReadChunk() {
 
 void WriteChunkRequest::OnApply(uint64_t index,
                                 ::google::protobuf::Closure *done) {
+
+    timer2.stop();
+    g_concurrent_apply_queue_latency << timer2.u_elapsed();
+
+    butil::Timer timer;
+    timer.start();
+
     brpc::ClosureGuard doneGuard(done);
     uint32_t cost;
 
@@ -496,11 +521,18 @@ void WriteChunkRequest::OnApply(uint64_t index,
     auto maxIndex =
         (index > node_->GetAppliedIndex() ? index : node_->GetAppliedIndex());
     response_->set_appliedindex(maxIndex);
+
+    timer.stop();
+    g_oprequest_leader_writechunk_latency << timer.u_elapsed();
+    g_oprequest_writechunk_latency << timer.u_elapsed();
 }
 
 void WriteChunkRequest::OnApplyFromLog(std::shared_ptr<CSDataStore> datastore,
                                        const ChunkRequest &request,
                                        const butil::IOBuf &data) {
+    butil::Timer timer;
+    timer.start();
+
     // NOTE: 处理过程中优先使用参数传入的datastore/request
     uint32_t cost;
     std::string  cloneSourceLocation;
@@ -519,7 +551,6 @@ void WriteChunkRequest::OnApplyFromLog(std::shared_ptr<CSDataStore> datastore,
                                      &cost,
                                      cloneSourceLocation);
      if (CSErrorCode::Success == ret) {
-         return;
      } else if (CSErrorCode::BackwardRequestError == ret) {
         LOG(WARNING) << "write failed: "
                      << " logic pool id: " << request.logicpoolid()
@@ -544,6 +575,10 @@ void WriteChunkRequest::OnApplyFromLog(std::shared_ptr<CSDataStore> datastore,
                    << " data size: " << request.size()
                    << " data store return: " << ret;
     }
+
+    timer.stop();
+    g_oprequest_follower_writechunk_latency << timer.u_elapsed();
+    g_oprequest_writechunk_latency << timer.u_elapsed();
 }
 
 void ReadSnapshotRequest::OnApply(uint64_t index,
