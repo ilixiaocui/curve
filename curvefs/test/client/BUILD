@@ -69,6 +69,9 @@ cc_binary(
     deps = [
         "//external:gtest",
         "//curvefs/src/client:fuse_client_lib",
+        "//curvefs/proto:metaserver_cc_proto",
+        "//curvefs/proto:mds_cc_proto",
+        "//curvefs/proto:space_cc_proto",
     ],
     linkopts = ["-lfuse3",
                 "-lpthread",
