@@ -37,7 +37,7 @@
 extern "C" {
 #endif
 
-int InitFuseClient();
+int InitFuseClient(const char* conf);
 
 void UnInitFuseClient();
 

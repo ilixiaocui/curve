@@ -83,12 +83,12 @@ TEST_F(SpaceAllocServerClientImplTest, test_AllocExtents) {
     std::list<Extent> out;
 
     curvefs::space::AllocateSpaceResponse response1;
-    response1.set_status(curvefs::space::SpaceStatusCode::OK);
+    response1.set_status(curvefs::space::SpaceStatusCode::SPACE_OK);
     auto extent1 = response1.add_extents();
     extent1->set_offset(0);
     extent1->set_length(1024);
     curvefs::space::AllocateSpaceResponse response2;
-    response2.set_status(curvefs::space::SpaceStatusCode::OK);
+    response2.set_status(curvefs::space::SpaceStatusCode::SPACE_OK);
     auto extent2 = response2.add_extents();
     extent2->set_offset(1024);
     extent2->set_length(1024);
@@ -113,7 +113,7 @@ TEST_F(SpaceAllocServerClientImplTest, test_DeAllocExtents) {
     allocatedExtents.push_back(extent);
 
     curvefs::space::DeallocateSpaceResponse response;
-    response.set_status(curvefs::space::SpaceStatusCode::OK);
+    response.set_status(curvefs::space::SpaceStatusCode::SPACE_OK);
     EXPECT_CALL(mockspacebasecli_, DeAllocExtents(_, _, _, _, _))
         .WillOnce(SetArgPointee<2>(response));
     ASSERT_EQ(CURVEFS_ERROR::OK,

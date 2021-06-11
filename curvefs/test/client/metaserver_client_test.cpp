@@ -110,21 +110,6 @@ TEST_F(MetaServerClientImplTest, test_ListDentry) {
         *dentryList.begin(), *d));
 }
 
-TEST_F(MetaServerClientImplTest, test_UpdateDentry) {
-    Dentry dentryUpdate;
-    dentryUpdate.set_fsid(1);
-    dentryUpdate.set_inodeid(10);
-    dentryUpdate.set_parentinodeid(1);
-    dentryUpdate.set_name("test_update_dentry");
-
-    curvefs::metaserver::UpdateDentryResponse response;
-    response.set_statuscode(curvefs::metaserver::OK);
-    EXPECT_CALL(mockmsbasecli_, UpdateDentry(_, _, _, _))
-        .WillOnce(SetArgPointee<1>(response));
-
-    ASSERT_EQ(CURVEFS_ERROR::OK, msclient_.UpdateDentry(dentryUpdate));
-}
-
 TEST_F(MetaServerClientImplTest, test_CreateDentry) {
     Dentry dentryCreate;
     dentryCreate.set_fsid(1);

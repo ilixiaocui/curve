@@ -31,6 +31,8 @@
 
 #include "curvefs/src/client/metaserver_client.h"
 
+#include "src/common/concurrent/concurrent.h"
+
 using ::curvefs::metaserver::Dentry;
 
 namespace curvefs {
@@ -38,12 +40,13 @@ namespace client {
 
 class DentryCacheManager {
  public:
-    DentryCacheManager() {}
+    DentryCacheManager(std::shared_ptr<MetaServerClient> metaClient)
+      : metaClient_(metaClient),
+        fsId_(0),
+        maxListCount_(10) {}
 
     CURVEFS_ERROR GetDentry(uint64_t parent,
         const std::string &name, Dentry *out);
-
-    CURVEFS_ERROR UpdateDentry(const Dentry &dentry);
 
     CURVEFS_ERROR CreateDentry(const Dentry &dentry);
 
@@ -51,12 +54,21 @@ class DentryCacheManager {
 
     CURVEFS_ERROR ListDentry(uint64_t parent, std::list<Dentry> *dentryList);
 
+    void SetFsId(uint32_t fsId) {
+        fsId_ = fsId;
+    }
+
  private:
+    std::shared_ptr<MetaServerClient> metaClient_;
+
+    std::unordered_map<uint64_t,
+        std::unordered_map<std::string, Dentry> > dCache_;
+
     uint32_t fsId_;
 
-    std::unordered_map<uint64_t, Dentry> dCache_;
+    uint32_t maxListCount_;
 
-    std::shared_ptr<MetaServerClient> metaClient_;
+    curve::common::Mutex mtx_;
 };
 
 }  // namespace client

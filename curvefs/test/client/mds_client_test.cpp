@@ -113,7 +113,7 @@ TEST_F(MdsClientImplTest, test_DeleteFs) {
 
 TEST_F(MdsClientImplTest, test_MountFs) {
     std::string fsName = "test1";
-    curvefs::mds::mountPoint mp;
+    curvefs::mds::MountPoint mp;
     mp.set_host("0.0.0.0");
     mp.set_mountdir("/data");
     FsInfo out;
@@ -148,7 +148,7 @@ TEST_F(MdsClientImplTest, test_MountFs) {
 
 TEST_F(MdsClientImplTest, test_UmountFs) {
     std::string fsName = "test1";
-    curvefs::mds::mountPoint mp;
+    curvefs::mds::MountPoint mp;
     mp.set_host("0.0.0.0");
     mp.set_mountdir("/data");
 

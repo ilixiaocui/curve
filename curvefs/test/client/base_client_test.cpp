@@ -135,31 +135,6 @@ TEST_F(BaseClientTest, test_ListDentry) {
         google::protobuf::util::MessageDifferencer::Equals(resp, response));
 }
 
-TEST_F(BaseClientTest, test_UpdateDentry) {
-    Dentry d;
-    d.set_fsid(1);
-    d.set_inodeid(2);
-    d.set_parentinodeid(1);
-    d.set_name("test11");
-    UpdateDentryResponse resp;
-    brpc::Controller cntl;
-    cntl.set_timeout_ms(1000);
-    brpc::Channel ch;
-    ASSERT_EQ(0, ch.Init(addr_.c_str(), nullptr));
-
-
-    curvefs::metaserver::UpdateDentryResponse response;
-    response.set_statuscode(curvefs::metaserver::UNKNOWN_ERROR);
-    EXPECT_CALL(mockMetaServerService_, UpdateDentry(_, _, _, _))
-        .WillOnce(DoAll(
-            SetArgPointee<2>(response),
-            Invoke(RpcService<UpdateDentryRequest, UpdateDentryResponse>)));
-
-    msbasecli_.UpdateDentry(d, &resp, &cntl, &ch);
-    ASSERT_TRUE(
-        google::protobuf::util::MessageDifferencer::Equals(resp, response));
-}
-
 TEST_F(BaseClientTest, test_CreateDentry) {
     Dentry d;
     d.set_fsid(1);
@@ -393,7 +368,7 @@ TEST_F(BaseClientTest, test_DeleteFs) {
 
 TEST_F(BaseClientTest, test_MountFs) {
     std::string fsName = "test1";
-    curvefs::mds::mountPoint mp;
+    curvefs::mds::MountPoint mp;
     mp.set_host("0.0.0.0");
     mp.set_mountdir("/data");
     MountFsResponse resp;
@@ -416,7 +391,7 @@ TEST_F(BaseClientTest, test_MountFs) {
 
 TEST_F(BaseClientTest, test_UmountFs) {
     std::string fsName = "test1";
-    curvefs::mds::mountPoint mp;
+    curvefs::mds::MountPoint mp;
     mp.set_host("0.0.0.0");
     mp.set_mountdir("/data");
     UmountFsResponse resp;
@@ -528,7 +503,7 @@ TEST_F(BaseClientTest, test_AllocExtents) {
     auto extent = response.add_extents();
     extent->set_offset(0);
     extent->set_length(1024);
-    response.set_status(curvefs::space::SpaceStatusCode::OK);
+    response.set_status(curvefs::space::SpaceStatusCode::SPACE_OK);
     EXPECT_CALL(mockSpaceAllocService_, AllocateSpace(_, _, _, _))
         .WillOnce(DoAll(
             SetArgPointee<2>(response),
@@ -554,7 +529,7 @@ TEST_F(BaseClientTest, test_DeAllocExtents) {
     ASSERT_EQ(0, ch.Init(addr_.c_str(), nullptr));
 
     curvefs::space::DeallocateSpaceResponse response;
-    response.set_status(curvefs::space::SpaceStatusCode::OK);
+    response.set_status(curvefs::space::SpaceStatusCode::SPACE_OK);
     EXPECT_CALL(mockSpaceAllocService_, DeallocateSpace(_, _, _, _))
         .WillOnce(DoAll(
             SetArgPointee<2>(response),

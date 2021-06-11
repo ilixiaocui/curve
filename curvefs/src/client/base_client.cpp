@@ -55,21 +55,6 @@ void MetaServerBaseClient::ListDentry(uint32_t fsId, uint64_t inodeid,
     stub.ListDentry(cntl, &request, response, nullptr);
 }
 
-void MetaServerBaseClient::UpdateDentry(const Dentry &dentry,
-                                        UpdateDentryResponse *response,
-                                        brpc::Controller *cntl,
-                                        brpc::Channel *channel) {
-    UpdateDentryRequest request;
-    Dentry *d = new Dentry;
-    d->set_fsid(dentry.fsid());
-    d->set_inodeid(dentry.inodeid());
-    d->set_parentinodeid(dentry.parentinodeid());
-    d->set_name(dentry.name());
-    request.set_allocated_dentry(d);
-    curvefs::metaserver::MetaServerService_Stub stub(channel);
-    stub.UpdateDentry(cntl, &request, response, nullptr);
-}
-
 void MetaServerBaseClient::CreateDentry(const Dentry &dentry,
                                         CreateDentryResponse *response,
                                         brpc::Controller *cntl,
@@ -182,12 +167,12 @@ void MDSBaseClient::DeleteFs(const std::string &fsName,
 }
 
 void MDSBaseClient::MountFs(const std::string &fsName,
-                            const mountPoint &mountPt,
+                            const MountPoint &mountPt,
                             MountFsResponse *response, brpc::Controller *cntl,
                             brpc::Channel *channel) {
     MountFsRequest request;
     request.set_fsname(fsName);
-    mountPoint *m = new mountPoint;
+    MountPoint *m = new MountPoint;
     m->CopyFrom(mountPt);
     request.set_allocated_mountpoint(m);
     curvefs::mds::MdsService_Stub stub(channel);
@@ -195,12 +180,12 @@ void MDSBaseClient::MountFs(const std::string &fsName,
 }
 
 void MDSBaseClient::UmountFs(const std::string &fsName,
-                             const mountPoint &mountPt,
+                             const MountPoint &mountPt,
                              UmountFsResponse *response, brpc::Controller *cntl,
                              brpc::Channel *channel) {
     UmountFsRequest request;
     request.set_fsname(fsName);
-    mountPoint *m = new mountPoint;
+    MountPoint *m = new MountPoint;
     m->CopyFrom(mountPt);
     request.set_allocated_mountpoint(m);
     curvefs::mds::MdsService_Stub stub(channel);

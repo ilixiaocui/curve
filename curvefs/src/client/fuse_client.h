@@ -33,67 +33,119 @@
 #include "curvefs/src/client/block_device_client.h"
 #include "curvefs/src/client/mds_client.h"
 #include "curvefs/src/client/dir_buffer.h"
+#include "curvefs/src/client/extent_manager.h"
+#include "curvefs/src/client/space_client.h"
 
 namespace curvefs {
 namespace client {
 
 class FuseClient {
  public:
-    FuseClient() {}
+    FuseClient(std::shared_ptr<MdsClient> mdsClient,
+        std::shared_ptr<MetaServerClient> metaClient,
+        std::shared_ptr<SpaceClient> spaceClient,
+        std::shared_ptr<BlockDeviceClient> blockDeviceClient,
+        std::shared_ptr<InodeCacheManager> inodeManager,
+        std::shared_ptr<DentryCacheManager> dentryManager,
+        std::shared_ptr<ExtentManager> extManager,
+        std::shared_ptr<DirBuffer> dirBuf)
+          : mdsClient_(mdsClient),
+            metaClient_(metaClient),
+            spaceClient_(spaceClient),
+            blockDeviceClient_(blockDeviceClient),
+            inodeManager_(inodeManager),
+            dentryManager_(dentryManager),
+            extManager_(extManager),
+            dirBuf_(dirBuf),
+            fsInfo_(nullptr) {}
 
     int Init() { return 0; }
     void UnInit() {}
 
     void init(void *userdata, struct fuse_conn_info *conn);
 
-    void destroy(void *userdata) {}
+    void destroy(void *userdata);
 
-    void lookup(fuse_req_t req, fuse_ino_t parent, const char *name);
+    CURVEFS_ERROR lookup(fuse_req_t req, fuse_ino_t parent, 
+        const char *name, fuse_entry_param *e);
 
-    void write(fuse_req_t req, fuse_ino_t ino, const char *buf,
-              size_t size, off_t off, struct fuse_file_info *fi);
+    CURVEFS_ERROR write(fuse_req_t req, fuse_ino_t ino,
+        const char *buf, size_t size, off_t off,
+        struct fuse_file_info *fi, size_t *wSize);
 
-    void read(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
+    CURVEFS_ERROR read(fuse_req_t req,
+            fuse_ino_t ino, size_t size, off_t off,
+            struct fuse_file_info *fi,
+            char **buffer,
+            size_t *rSize);
+
+    CURVEFS_ERROR open(fuse_req_t req, fuse_ino_t ino,
               struct fuse_file_info *fi);
 
-    void open(fuse_req_t req, fuse_ino_t ino,
-              struct fuse_file_info *fi);
+    CURVEFS_ERROR create(fuse_req_t req, fuse_ino_t parent,
+        const char *name, mode_t mode, struct fuse_file_info *fi,
+        fuse_entry_param *e);
 
-    void create(fuse_req_t req, fuse_ino_t parent, const char *name,
-              mode_t mode, struct fuse_file_info *fi);
+    CURVEFS_ERROR mknod(fuse_req_t req, fuse_ino_t parent,
+            const char *name, mode_t mode, dev_t rdev,
+            fuse_entry_param *e);
 
-    void mknod(fuse_req_t req, fuse_ino_t parent, const char *name,
-              mode_t mode, dev_t rdev);
+    CURVEFS_ERROR mkdir(fuse_req_t req, fuse_ino_t parent,
+            const char *name, mode_t mode,
+            fuse_entry_param *e);
 
-    void mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
-               mode_t mode);
+    CURVEFS_ERROR unlink(fuse_req_t req, fuse_ino_t parent, const char *name);
 
-    void unlink(fuse_req_t req, fuse_ino_t parent, const char *name);
+    CURVEFS_ERROR rmdir(fuse_req_t req, fuse_ino_t parent, const char *name);
 
-    void rmdir(fuse_req_t req, fuse_ino_t parent, const char *name);
-
-    void opendir(fuse_req_t req, fuse_ino_t ino,
+    CURVEFS_ERROR opendir(fuse_req_t req, fuse_ino_t ino,
              struct fuse_file_info *fi);
 
-    void readdir(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
-             struct fuse_file_info *fi);
+    CURVEFS_ERROR readdir(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
+            struct fuse_file_info *fi,
+            char **buffer,
+            size_t *rSize);
 
-    void getattr(fuse_req_t req, fuse_ino_t ino,
-             struct fuse_file_info *fi);
+    CURVEFS_ERROR getattr(fuse_req_t req, fuse_ino_t ino,
+             struct fuse_file_info *fi, struct stat *attr);
 
-    void setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
-            int to_set, struct fuse_file_info *fi);
+    CURVEFS_ERROR setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
+            int to_set, struct fuse_file_info *fi, struct stat *attrOut);
+
+    void SetFsInfo(std::shared_ptr<FsInfo> fsInfo) {
+        fsInfo_ = fsInfo;
+    }
+
+    std::shared_ptr<FsInfo> GetFsInfo() {
+        return fsInfo_;
+    }
 
  private:
-    void fuse_reply_err_by_errcode(fuse_req_t req, CURVEFS_ERROR errcode);
-
     void GetDentryParamFromInode(const Inode &inode, fuse_entry_param *param);
 
     void GetAttrFromInode(const Inode &inode, struct stat *attr);
 
+    CURVEFS_ERROR GetMointPoint(const std::string &str, MountPoint *mp);
+
+    CURVEFS_ERROR MakeNode(fuse_req_t req, fuse_ino_t parent,
+            const char *name, mode_t mode, FsFileType type,
+            fuse_entry_param *e);
+
+    CURVEFS_ERROR RemoveNode(fuse_req_t req, fuse_ino_t parent,
+        const char *name);
+
  private:
-    // filesystem info
-    std::shared_ptr<FsInfo> fsInfo_;
+    // mds client
+    std::shared_ptr<MdsClient> mdsClient_;
+
+    // metaserver client
+    std::shared_ptr<MetaServerClient> metaClient_;
+
+    // space client
+    std::shared_ptr<SpaceClient> spaceClient_;
+
+    // curve client
+    std::shared_ptr<BlockDeviceClient> blockDeviceClient_;
 
     // inode cache manager
     std::shared_ptr<InodeCacheManager> inodeManager_;
@@ -101,17 +153,14 @@ class FuseClient {
     // dentry cache manager
     std::shared_ptr<DentryCacheManager> dentryManager_;
 
+    // extent manager
+    std::shared_ptr<ExtentManager> extManager_;
+
     // dir buffer
     std::shared_ptr<DirBuffer> dirBuf_;
 
-    // metaserver client
-    std::shared_ptr<MetaServerClient> metaClient_;
-
-    // mds client
-    std::shared_ptr<MdsClient> mdsClient_;
-
-    // curve client
-    std::shared_ptr<BlockDeviceClient> blockDeviceClient_;
+    // filesystem info
+    std::shared_ptr<FsInfo> fsInfo_;
 };
 
 }  // namespace client

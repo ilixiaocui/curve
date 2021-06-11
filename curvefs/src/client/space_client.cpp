@@ -123,10 +123,10 @@ SpaceAllocServerClientImpl::DeAllocExtents(uint32_t fsId,
 void SpaceAllocServerClientImpl::SpaceStatusCode2CurveFSErr(
     const SpaceStatusCode &statcode, CURVEFS_ERROR *errcode) {
     switch (statcode) {
-    case SpaceStatusCode::OK:
+    case SpaceStatusCode::SPACE_OK:
         *errcode = CURVEFS_ERROR::OK;
         break;
-    case SpaceStatusCode::NOSPACE:
+    case SpaceStatusCode::SPACE_NOSPACE:
         *errcode = CURVEFS_ERROR::NOSPACE;
 
     default:

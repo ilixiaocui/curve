@@ -67,16 +67,6 @@ message CreateDentryResponse {
     required MetaStatusCode statusCode = 1;
 }
 
-/*
-message UpdateDentryRequest {
-    required Dentry dentry = 1;
-}
-
-message UpdateDentryResponse {
-    required MetaStatusCode statusCode = 1;
-}
-*/
-
 message DeleteDentryRequest {
     required uint32 fsId = 1;
     required uint64 parentInodeId = 2;
@@ -176,7 +166,6 @@ service MetaServerService {
     rpc GetDentry(GetDentryRequest) returns (GetDentryResponse);
     rpc ListDentry(ListDentryRequest) returns (ListDentryResponse);
     rpc CreateDentry(CreateDentryRequest) returns (CreateDentryResponse);
-    // rpc UpdateDentry(UpdateDentryRequest) returns (UpdateDentryResponse);
     rpc DeleteDentry(DeleteDentryRequest) returns (DeleteDentryResponse);
 
     // inode interface

@@ -22,13 +22,47 @@
  */
 #include "curvefs/src/client/curve_fuse_op.h"
 #include "curvefs/src/client/fuse_client.h"
+#include "curvefs/src/client/error_code.h"
+#include "src/common/configuration.h"
 
 using ::curvefs::client::FuseClient;
+using ::curvefs::client::SimpleExtentManager;
+using ::curvefs::client::InodeCacheManager;
+using ::curvefs::client::DentryCacheManager;
+using ::curvefs::client::DirBuffer;
+using ::curvefs::client::MetaServerClientImpl;
+using ::curvefs::client::MdsClientImpl;
+using ::curvefs::client::BlockDeviceClientImpl;
+using ::curvefs::client::CURVEFS_ERROR;
+using ::curvefs::client::SpaceAllocServerClientImpl;
 
 static FuseClient *g_ClientInstance = nullptr;
 
-int InitFuseClient() {
-    g_ClientInstance = new FuseClient();
+int InitFuseClient(const char* confPath) {
+//    common::Configuration conf;
+//    conf.SetConfigPath(confPath);
+//
+//    // 打印参数
+//    conf.PrintConfig();
+
+
+
+    auto mdsClient = std::make_shared<MdsClientImpl>();
+    auto metaClient = std::make_shared<MetaServerClientImpl>();
+    auto spaceClient = std::make_shared<SpaceAllocServerClientImpl>();
+    auto blockDeviceClient = std::make_shared<BlockDeviceClientImpl>();
+    auto inodeManager = std::make_shared<InodeCacheManager>(metaClient);
+    auto dentryManager = std::make_shared<DentryCacheManager>(metaClient);
+    auto extManager = std::make_shared<SimpleExtentManager>();
+    auto dirBuf = std::make_shared<DirBuffer>();
+    g_ClientInstance = new FuseClient(mdsClient,
+        metaClient,
+        spaceClient,
+        blockDeviceClient,
+        inodeManager,
+        dentryManager,
+        extManager,
+        dirBuf);
     return g_ClientInstance->Init();
 }
 
@@ -45,65 +79,145 @@ void curve_ll_destroy(void *userdata) {
     g_ClientInstance->destroy(userdata);
 }
 
+void fuse_reply_err_by_errcode(
+    fuse_req_t req, CURVEFS_ERROR errcode) {
+    switch (errcode) {
+        case CURVEFS_ERROR::OK:
+            fuse_reply_err(req, 0);
+            break;
+        case CURVEFS_ERROR::NO_SPACE:
+            fuse_reply_err(req, ENOSPC);
+            break;
+        default:
+            fuse_reply_err(req, EIO);
+            break;
+    }
+}
+
 void curve_ll_lookup(fuse_req_t req, fuse_ino_t parent, const char *name) {
-    g_ClientInstance->lookup(req, parent, name);
+    fuse_entry_param e;
+    CURVEFS_ERROR ret = g_ClientInstance->lookup(req, parent, name, &e);
+    if (ret != CURVEFS_ERROR::OK) {
+        fuse_reply_err_by_errcode(req, ret);
+    }
+    fuse_reply_entry(req, &e);
 }
 
 void curve_ll_getattr(fuse_req_t req, fuse_ino_t ino,
          struct fuse_file_info *fi) {
-    g_ClientInstance->getattr(req, ino, fi);
+    struct stat attr;
+    CURVEFS_ERROR ret = g_ClientInstance->getattr(req, ino, fi, &attr);
+    if (ret != CURVEFS_ERROR::OK) {
+        fuse_reply_err_by_errcode(req, ret);
+    }
+    fuse_reply_attr(req, &attr, 1.0);
 }
 
 void curve_ll_readdir(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
          struct fuse_file_info *fi) {
-    g_ClientInstance->readdir(req, ino, size, off, fi);
+    char *buffer;
+    size_t rSize = 0;
+    CURVEFS_ERROR ret = g_ClientInstance->readdir(req, ino, size, off, fi,
+        &buffer, &rSize);
+    if (ret != CURVEFS_ERROR::OK) {
+        fuse_reply_err_by_errcode(req, ret);
+    }
+    fuse_reply_buf(req, buffer, rSize);
 }
 
 void curve_ll_open(fuse_req_t req, fuse_ino_t ino,
           struct fuse_file_info *fi) {
-    g_ClientInstance->open(req, ino, fi);
+    CURVEFS_ERROR ret = g_ClientInstance->open(req, ino, fi);
+    if (ret != CURVEFS_ERROR::OK) {
+        fuse_reply_err_by_errcode(req, ret);
+    }
+    fuse_reply_open(req, fi);
 }
 
 void curve_ll_read(fuse_req_t req, fuse_ino_t ino, size_t size, off_t off,
           struct fuse_file_info *fi) {
-    g_ClientInstance->read(req, ino, size, off, fi);
+    char *buffer;
+    size_t rSize = 0;
+    CURVEFS_ERROR ret = g_ClientInstance->read(req, ino, size, off, fi,
+        &buffer, &rSize);
+    if (ret != CURVEFS_ERROR::OK) {
+        fuse_reply_err_by_errcode(req, ret);
+    }
+    fuse_reply_buf(req, buffer, rSize);
+    free(buffer);
 }
 
 void curve_ll_write(fuse_req_t req, fuse_ino_t ino, const char *buf,
            size_t size, off_t off, struct fuse_file_info *fi) {
-    g_ClientInstance->write(req, ino, buf, size, off, fi);
+    size_t wSize = 0;
+    CURVEFS_ERROR ret = g_ClientInstance->write(req, ino, buf, size, off,
+        fi, &wSize);
+    if (ret != CURVEFS_ERROR::OK) {
+        fuse_reply_err_by_errcode(req, ret);
+    }
+    fuse_reply_write(req, wSize);
 }
 
 void curve_ll_create(fuse_req_t req, fuse_ino_t parent, const char *name,
         mode_t mode, struct fuse_file_info *fi) {
-    g_ClientInstance->create(req, parent, name, mode, fi);
+    fuse_entry_param e;
+    CURVEFS_ERROR ret = g_ClientInstance->create(req, parent, name,
+        mode, fi, &e);
+    if (ret != CURVEFS_ERROR::OK) {
+        fuse_reply_err_by_errcode(req, ret);
+    }
+    fuse_reply_create(req, &e, fi);
 }
 
 void curve_ll_mknod(fuse_req_t req, fuse_ino_t parent, const char *name,
            mode_t mode, dev_t rdev) {
-    g_ClientInstance->mknod(req, parent, name, mode, rdev);
+    fuse_entry_param e;
+    CURVEFS_ERROR ret = g_ClientInstance->mknod(req, parent, name,
+        mode, rdev, &e);
+    if (ret != CURVEFS_ERROR::OK) {
+        fuse_reply_err_by_errcode(req, ret);
+    }
+    fuse_reply_entry(req, &e);
 }
 
 void curve_ll_mkdir(fuse_req_t req, fuse_ino_t parent, const char *name,
            mode_t mode) {
-    g_ClientInstance->mkdir(req, parent, name, mode);
+    fuse_entry_param e;
+    CURVEFS_ERROR ret = g_ClientInstance->mkdir(req, parent, name,
+        mode, &e);
+    if (ret != CURVEFS_ERROR::OK) {
+        fuse_reply_err_by_errcode(req, ret);
+    }
+    fuse_reply_entry(req, &e);
 }
 
 void curve_ll_unlink(fuse_req_t req, fuse_ino_t parent, const char *name) {
-    g_ClientInstance->unlink(req, parent, name);
+    CURVEFS_ERROR ret = g_ClientInstance->unlink(req, parent, name);
+    fuse_reply_err_by_errcode(req, ret);
 }
 
 void curve_ll_rmdir(fuse_req_t req, fuse_ino_t parent, const char *name) {
-    g_ClientInstance->rmdir(req, parent, name);
+    CURVEFS_ERROR ret = g_ClientInstance->rmdir(req, parent, name);
+    fuse_reply_err_by_errcode(req, ret);
 }
 
 void curve_ll_opendir(fuse_req_t req, fuse_ino_t ino,
          struct fuse_file_info *fi) {
-    g_ClientInstance->opendir(req, ino, fi);
+    CURVEFS_ERROR ret = g_ClientInstance->opendir(req, ino, fi);
+    if (ret != CURVEFS_ERROR::OK) {
+        fuse_reply_err_by_errcode(req, ret);
+    }
+    fuse_reply_open(req, fi);
 }
 
 void curve_ll_setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
          int to_set, struct fuse_file_info *fi) {
-    g_ClientInstance->setattr(req, ino, attr, to_set, fi);
+    struct stat attrOut;
+    CURVEFS_ERROR ret = g_ClientInstance->setattr(req, ino, attr, to_set,
+        fi, &attrOut);
+    if (ret != CURVEFS_ERROR::OK) {
+        fuse_reply_err_by_errcode(req, ret);
+    }
+    fuse_reply_attr(req, &attrOut, 1.0);
 }
 

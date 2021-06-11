@@ -39,6 +39,7 @@ using ::curvefs::metaserver::Dentry;
 using ::curvefs::metaserver::FsFileType;
 using ::curvefs::metaserver::Inode;
 using ::curvefs::space::Extent;
+using ::curvefs::space::AllocateType;
 
 namespace curvefs {
 namespace client {
@@ -55,10 +56,8 @@ class MetaServerClient {
                                     const std::string &name, Dentry *out) = 0;
 
     virtual CURVEFS_ERROR ListDentry(uint32_t fsId, uint64_t inodeid,
-                                     const std::string &last, uint32_t count,
-                                     std::list<Dentry> *dentryList) = 0;
-
-    virtual CURVEFS_ERROR UpdateDentry(const Dentry &dentry) = 0;
+            const std::string &last, uint32_t count,
+            std::list<Dentry> *dentryList) = 0;
 
     virtual CURVEFS_ERROR CreateDentry(const Dentry &dentry) = 0;
 
@@ -73,14 +72,6 @@ class MetaServerClient {
     virtual CURVEFS_ERROR CreateInode(const InodeParam &param, Inode *out) = 0;
 
     virtual CURVEFS_ERROR DeleteInode(uint32_t fsId, uint64_t inodeid) = 0;
-
-    virtual CURVEFS_ERROR
-    AllocExtents(uint32_t fsId,
-                 const std::list<ExtentAllocInfo> &toAllocExtents,
-                 std::list<Extent> *allocatedExtents) = 0;
-
-    virtual CURVEFS_ERROR
-    DeAllocExtents(uint32_t fsId, std::list<Extent> allocatedExtents) = 0;
 };
 
 
@@ -100,8 +91,6 @@ class MetaServerClientImpl : public MetaServerClient {
                              const std::string &last, uint32_t count,
                              std::list<Dentry> *dentryList) override;
 
-    CURVEFS_ERROR UpdateDentry(const Dentry &dentry) override;
-
     CURVEFS_ERROR CreateDentry(const Dentry &dentry) override;
 
     CURVEFS_ERROR DeleteDentry(uint32_t fsId, uint64_t inodeid,
@@ -115,13 +104,6 @@ class MetaServerClientImpl : public MetaServerClient {
     CURVEFS_ERROR CreateInode(const InodeParam &param, Inode *out) override;
 
     CURVEFS_ERROR DeleteInode(uint32_t fsId, uint64_t inodeid) override;
-
-    CURVEFS_ERROR AllocExtents(uint32_t fsId,
-                               const std::list<ExtentAllocInfo> &toAllocExtents,
-                               std::list<Extent> *allocatedExtents) override;
-
-    CURVEFS_ERROR DeAllocExtents(uint32_t fsId,
-                                 std::list<Extent> allocatedExtents) override;
 
     void MetaServerStatusCode2CurveFSErr(const MetaStatusCode &statcode,
                                          CURVEFS_ERROR *errcode);

@@ -37,7 +37,6 @@ struct ExtentAllocInfo {
 struct PExtent {
     uint64_t pOffset;
     uint64_t len;
-    uint64_t lOffset;
     bool UnWritten;
 };
 

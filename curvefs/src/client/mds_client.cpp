@@ -104,7 +104,7 @@ CURVEFS_ERROR MdsClientImpl::DeleteFs(const std::string &fsName) {
 }
 
 CURVEFS_ERROR MdsClientImpl::MountFs(const std::string &fsName,
-                                     const mountPoint &mountPt,
+                                     const MountPoint &mountPt,
                                      FsInfo *fsInfo) {
     auto task = RPCTask {
         MountFsResponse response;
@@ -135,7 +135,7 @@ CURVEFS_ERROR MdsClientImpl::MountFs(const std::string &fsName,
 }
 
 CURVEFS_ERROR MdsClientImpl::UmountFs(const std::string &fsName,
-                                      const mountPoint &mountPt) {
+                                      const MountPoint &mountPt) {
     auto task = RPCTask {
         UmountFsResponse response;
         mdsbasecli_->UmountFs(fsName, mountPt, &response, cntl, channel);
@@ -224,11 +224,7 @@ void MdsClientImpl::FSStatusCode2CurveFSErr(FSStatusCode stcode,
         *retcode = CURVEFS_ERROR::OK;
         break;
 
-    case FSStatusCode::NOSPACE:
-        *retcode = CURVEFS_ERROR::NO_SPACE;
-        break;
-
-    case FSStatusCode::FS_NOT_FOUND:
+    case FSStatusCode::NOT_FOUND:
         *retcode = CURVEFS_ERROR::NOTEXIST;
         break;
 

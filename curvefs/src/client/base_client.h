@@ -54,8 +54,6 @@ using curvefs::metaserver::GetInodeResponse;
 using curvefs::metaserver::Inode;
 using curvefs::metaserver::ListDentryRequest;
 using curvefs::metaserver::ListDentryResponse;
-using curvefs::metaserver::UpdateDentryRequest;
-using curvefs::metaserver::UpdateDentryResponse;
 using curvefs::metaserver::UpdateInodeRequest;
 using curvefs::metaserver::UpdateInodeResponse;
 
@@ -69,7 +67,7 @@ using curvefs::mds::GetFsInfoRequest;
 using curvefs::mds::GetFsInfoResponse;
 using curvefs::mds::MountFsRequest;
 using curvefs::mds::MountFsResponse;
-using curvefs::mds::mountPoint;
+using curvefs::mds::MountPoint;
 using curvefs::mds::UmountFsRequest;
 using curvefs::mds::UmountFsResponse;
 
@@ -106,10 +104,6 @@ class MetaServerBaseClient {
                             ListDentryResponse *response,
                             brpc::Controller *cntl, brpc::Channel *channel);
 
-    virtual void UpdateDentry(const Dentry &dentry,
-                              UpdateDentryResponse *response,
-                              brpc::Controller *cntl, brpc::Channel *channel);
-
     virtual void CreateDentry(const Dentry &dentry,
                               CreateDentryResponse *response,
                               brpc::Controller *cntl, brpc::Channel *channel);
@@ -144,11 +138,11 @@ class MDSBaseClient {
     virtual void DeleteFs(const std::string &fsName, DeleteFsResponse *response,
                           brpc::Controller *cntl, brpc::Channel *channel);
 
-    virtual void MountFs(const std::string &fsName, const mountPoint &mountPt,
+    virtual void MountFs(const std::string &fsName, const MountPoint &mountPt,
                          MountFsResponse *response, brpc::Controller *cntl,
                          brpc::Channel *channel);
 
-    virtual void UmountFs(const std::string &fsName, const mountPoint &mountPt,
+    virtual void UmountFs(const std::string &fsName, const MountPoint &mountPt,
                           UmountFsResponse *response, brpc::Controller *cntl,
                           brpc::Channel *channel);
 

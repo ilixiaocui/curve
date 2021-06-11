@@ -46,10 +46,6 @@ class MockMetaServerBaseClient : public MetaServerBaseClient {
                       uint32_t count, ListDentryResponse *response,
                       brpc::Controller *cntl, brpc::Channel *channel));
 
-    MOCK_METHOD4(UpdateDentry,
-                 void(const Dentry &dentry, UpdateDentryResponse *response,
-                      brpc::Controller *cntl, brpc::Channel *channel));
-
     MOCK_METHOD4(CreateDentry,
                  void(const Dentry &dentry, CreateDentryResponse *response,
                       brpc::Controller *cntl, brpc::Channel *channel));

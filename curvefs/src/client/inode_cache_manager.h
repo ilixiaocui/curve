@@ -29,6 +29,7 @@
 
 #include "curvefs/src/client/metaserver_client.h"
 #include "curvefs/src/client/error_code.h"
+#include "src/common/concurrent/concurrent.h"
 
 using ::curvefs::metaserver::Inode;
 
@@ -38,7 +39,8 @@ namespace client {
 
 class InodeCacheManager {
  public:
-    InodeCacheManager() {}
+    InodeCacheManager(std::shared_ptr<MetaServerClient> metaClient)
+      : metaClient_(metaClient) {}
 
     CURVEFS_ERROR Init();
 
@@ -50,12 +52,18 @@ class InodeCacheManager {
 
     CURVEFS_ERROR DeleteInode(uint64_t inodeid);
 
+    void SetFsId(uint32_t fsId) {
+        fsId_ = fsId;
+    }
+
  private:
-    uint32_t fsId_;
+    std::shared_ptr<MetaServerClient> metaClient_;
 
     std::unordered_map<uint64_t, Inode> iCache_;
 
-    std::shared_ptr<MetaServerClient> metaClient_;
+    uint32_t fsId_;
+
+    curve::common::Mutex mtx_;
 };
 
 

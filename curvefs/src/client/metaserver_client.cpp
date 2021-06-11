@@ -121,32 +121,6 @@ CURVEFS_ERROR MetaServerClientImpl::ListDentry(uint32_t fsId, uint64_t inodeid,
     return excutor_.DoRPCTask(task);
 }
 
-CURVEFS_ERROR MetaServerClientImpl::UpdateDentry(const Dentry &dentry) {
-    auto task = RPCTaskDefine {
-        UpdateDentryResponse response;
-        basecli_->UpdateDentry(dentry, &response, cntl, channel);
-
-        if (cntl->Failed()) {
-            LOG(WARNING) << "UpdateDentry Failed, errorcode = "
-                         << cntl->ErrorCode()
-                         << ", error content:" << cntl->ErrorText()
-                         << ", log id = " << cntl->log_id();
-            return -cntl->ErrorCode();
-        }
-
-        CURVEFS_ERROR retcode = CURVEFS_ERROR::FAILED;
-        MetaStatusCode stcode = response.statuscode();
-        MetaServerStatusCode2CurveFSErr(stcode, &retcode);
-        LOG_IF(WARNING, retcode != CURVEFS_ERROR::OK)
-            << "UpdateDentry:  dentry = " << dentry.DebugString()
-            << ", errcode = " << retcode
-            << ", errmsg = " << MetaStatusCode_Name(stcode);
-
-        return static_cast<int>(retcode);
-    };
-    return excutor_.DoRPCTask(task);
-}
-
 CURVEFS_ERROR MetaServerClientImpl::CreateDentry(const Dentry &dentry) {
     auto task = RPCTaskDefine {
         CreateDentryResponse response;
@@ -325,19 +299,6 @@ void MetaServerClientImpl::MetaServerStatusCode2CurveFSErr(
         *errcode = CURVEFS_ERROR::UNKNOWN;
         break;
     }
-}
-
-
-CURVEFS_ERROR MetaServerClientImpl::AllocExtents(
-    uint32_t fsId, const std::list<ExtentAllocInfo> &toAllocExtents,
-    std::list<Extent> *allocatedExtents) {
-    return CURVEFS_ERROR::OK;
-}
-
-CURVEFS_ERROR
-MetaServerClientImpl::DeAllocExtents(uint32_t fsId,
-                                     std::list<Extent> allocatedExtents) {
-    return CURVEFS_ERROR::OK;
 }
 
 }  // namespace client
