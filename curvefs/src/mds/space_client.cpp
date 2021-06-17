@@ -64,7 +64,7 @@ FSStatusCode SpaceClient::InitSpace(const FsInfo& fsInfo) {
         return FSStatusCode::RPC_ERROR;
     }
 
-    if (response.status() != SpaceStatusCode::OK) {
+    if (response.status() != SpaceStatusCode::SPACE_OK) {
         LOG(ERROR) << "InitSpace failed, ret = "
                    << FSStatusCode::INIT_SPACE_ERROR;
         return FSStatusCode::INIT_SPACE_ERROR;
@@ -95,7 +95,7 @@ FSStatusCode SpaceClient::UnInitSpace(uint32_t fsId) {
         return FSStatusCode::RPC_ERROR;
     }
 
-    if (response.status() != SpaceStatusCode::OK) {
+    if (response.status() != SpaceStatusCode::SPACE_OK) {
         LOG(ERROR) << "UnInitSpace failed, ret = "
                    << FSStatusCode::INIT_SPACE_ERROR;
         return FSStatusCode::UNINIT_SPACE_ERROR;

@@ -30,7 +30,7 @@ void FakeSpaceImpl::InitSpace(::google::protobuf::RpcController* controller,
     brpc::ClosureGuard doneGuard(done);
     // brpc::Controller* cntl = static_cast<brpc::Controller*>(controller);
     initCount++;
-    SpaceStatusCode status = SpaceStatusCode::OK;
+    SpaceStatusCode status = SpaceStatusCode::SPACE_OK;
     response->set_status(status);
     return;
 }
@@ -42,7 +42,7 @@ void FakeSpaceImpl::AllocateSpace(::google::protobuf::RpcController* controller,
     brpc::ClosureGuard doneGuard(done);
     // brpc::Controller* cntl = static_cast<brpc::Controller*>(controller);
     allocCount++;
-    SpaceStatusCode status = SpaceStatusCode::OK;
+    SpaceStatusCode status = SpaceStatusCode::SPACE_OK;
     response->set_status(status);
     return;
 }
@@ -54,7 +54,7 @@ void FakeSpaceImpl::DeallocateSpace(::google::protobuf::RpcController* controlle
     brpc::ClosureGuard doneGuard(done);
     // brpc::Controller* cntl = static_cast<brpc::Controller*>(controller);
     deallocateCount++;
-    SpaceStatusCode status = SpaceStatusCode::OK;
+    SpaceStatusCode status = SpaceStatusCode::SPACE_OK;
     response->set_status(status);
     return;
 }
@@ -66,7 +66,7 @@ void FakeSpaceImpl::StatSpace(::google::protobuf::RpcController* controller,
     brpc::ClosureGuard doneGuard(done);
     // brpc::Controller* cntl = static_cast<brpc::Controller*>(controller);
     statCount++;
-    SpaceStatusCode status = SpaceStatusCode::OK;
+    SpaceStatusCode status = SpaceStatusCode::SPACE_OK;
     response->set_status(status);
     return;
 }
@@ -78,7 +78,7 @@ void FakeSpaceImpl::UnInitSpace(::google::protobuf::RpcController* controller,
     brpc::ClosureGuard doneGuard(done);
     // brpc::Controller* cntl = static_cast<brpc::Controller*>(controller);
     uninitCount++;
-    SpaceStatusCode status = SpaceStatusCode::OK;
+    SpaceStatusCode status = SpaceStatusCode::SPACE_OK;
     response->set_status(status);
     return;
 }
