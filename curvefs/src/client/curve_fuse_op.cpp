@@ -23,6 +23,7 @@
 #include "curvefs/src/client/curve_fuse_op.h"
 #include "curvefs/src/client/fuse_client.h"
 #include "curvefs/src/client/error_code.h"
+#include "curvefs/src/client/config.h"
 #include "src/common/configuration.h"
 
 using ::curvefs::client::FuseClient;
@@ -35,21 +36,45 @@ using ::curvefs::client::MdsClientImpl;
 using ::curvefs::client::BlockDeviceClientImpl;
 using ::curvefs::client::CURVEFS_ERROR;
 using ::curvefs::client::SpaceAllocServerClientImpl;
+using ::curve::common::Configuration;
+using ::curvefs::client::FuseClientOption;
+using ::curvefs::client::MDSBaseClient;
+using ::curvefs::client::MetaServerBaseClient;
+using ::curvefs::client::SpaceBaseClient;
 
 static FuseClient *g_ClientInstance = nullptr;
 
 int InitFuseClient(const char* confPath) {
-//    common::Configuration conf;
-//    conf.SetConfigPath(confPath);
-//
-//    // 打印参数
-//    conf.PrintConfig();
+    Configuration conf;
+    conf.SetConfigPath(confPath);
 
+    // 打印参数
+    conf.PrintConfig();
 
+    FuseClientOption option;
+    curvefs::client::InitFuseClientOption(&conf, &option);
 
     auto mdsClient = std::make_shared<MdsClientImpl>();
+    MDSBaseClient *mdsBase = new MDSBaseClient();
+    CURVEFS_ERROR ret = mdsClient->Init(option.mdsOpt, mdsBase);
+    if (ret != CURVEFS_ERROR::OK) {
+        return (int)ret;
+    }
+
     auto metaClient = std::make_shared<MetaServerClientImpl>();
+    MetaServerBaseClient *metaBase = new MetaServerBaseClient();
+    ret = metaClient->Init(option.metaOpt, metaBase);
+    if (ret != CURVEFS_ERROR::OK) {
+        return (int)ret;
+    }
+
     auto spaceClient = std::make_shared<SpaceAllocServerClientImpl>();
+    SpaceBaseClient *spaceBase = new SpaceBaseClient();
+    ret = spaceClient->Init(option.spaceOpt, spaceBase);
+    if (ret != CURVEFS_ERROR::OK) {
+        return (int)ret;
+    }
+
     auto blockDeviceClient = std::make_shared<BlockDeviceClientImpl>();
     auto inodeManager = std::make_shared<InodeCacheManager>(metaClient);
     auto dentryManager = std::make_shared<DentryCacheManager>(metaClient);
@@ -63,7 +88,8 @@ int InitFuseClient(const char* confPath) {
         dentryManager,
         extManager,
         dirBuf);
-    return g_ClientInstance->Init();
+
+    return (int)g_ClientInstance->Init(option);
 }
 
 void UnInitFuseClient() {

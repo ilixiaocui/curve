@@ -36,6 +36,11 @@ using ::curvefs::mds::MountPoint;
 namespace curvefs {
 namespace client {
 
+CURVEFS_ERROR FuseClient::Init(const FuseClientOption &option) {
+    bdevOpt_ = option.bdevOpt;
+    return CURVEFS_ERROR::OK;
+}
+
 CURVEFS_ERROR FuseClient::GetMointPoint(
     const std::string &str, MountPoint *mp) {
     std::vector<std::string> items;
@@ -97,6 +102,13 @@ void FuseClient::init(void *userdata, struct fuse_conn_info *conn) {
     LOG(INFO) << "Mount " << fsName
               << " on " << mountPointStr
               << " success!";
+
+    bdevOpt_.volumeName = volName;
+    blockDeviceClient_->Init(bdevOpt_);
+    if (ret != CURVEFS_ERROR::OK) {
+        LOG(ERROR) << "Init BlockDeviceClientImpl failed, ret = " << ret;
+        return;
+    }
     return;
 }
 

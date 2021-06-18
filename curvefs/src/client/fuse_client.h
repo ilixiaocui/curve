@@ -35,6 +35,7 @@
 #include "curvefs/src/client/dir_buffer.h"
 #include "curvefs/src/client/extent_manager.h"
 #include "curvefs/src/client/space_client.h"
+#include "curvefs/src/client/config.h"
 
 namespace curvefs {
 namespace client {
@@ -59,7 +60,9 @@ class FuseClient {
             dirBuf_(dirBuf),
             fsInfo_(nullptr) {}
 
-    int Init() { return 0; }
+    CURVEFS_ERROR Init(const FuseClientOption &option);
+
+    // TODO(xuchaojie): fix uninit
     void UnInit() {}
 
     void init(void *userdata, struct fuse_conn_info *conn);
@@ -161,6 +164,8 @@ class FuseClient {
 
     // filesystem info
     std::shared_ptr<FsInfo> fsInfo_;
+
+    BlockDeviceClientOptions bdevOpt_;
 };
 
 }  // namespace client

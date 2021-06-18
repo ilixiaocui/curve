@@ -26,6 +26,9 @@
 #define CURVEFS_SRC_CLIENT_CONFIG_H_
 
 #include <string>
+#include "src/common/configuration.h"
+
+using ::curve::common::Configuration;
 
 namespace curvefs {
 namespace client {
@@ -54,6 +57,17 @@ struct SpaceAllocServerOption {
     uint64_t rpcTimeoutMs;
 };
 
+
+struct FuseClientOption {
+    MdsOption mdsOpt;
+    MetaServerOption metaOpt;
+    SpaceAllocServerOption spaceOpt;
+    BlockDeviceClientOptions bdevOpt;
+};
+
+
+void InitFuseClientOption(Configuration *conf,
+    FuseClientOption *clientOption);
 
 }  // namespace client
 }  // namespace curvefs
