@@ -103,7 +103,7 @@ void FuseClient::init(void *userdata, struct fuse_conn_info *conn) {
               << " on " << mountPointStr
               << " success!";
 
-    bdevOpt_.volumeName = volName;
+    // bdevOpt_.volumeName = volName;
     blockDeviceClient_->Init(bdevOpt_);
     if (ret != CURVEFS_ERROR::OK) {
         LOG(ERROR) << "Init BlockDeviceClientImpl failed, ret = " << ret;

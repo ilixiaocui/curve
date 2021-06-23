@@ -36,9 +36,6 @@ namespace client {
 struct BlockDeviceClientOptions {
     // config path
     std::string configPath;
-
-    // volume name (ex: /filename_user_)
-    std::string volumeName;
 };
 
 struct MdsOption {

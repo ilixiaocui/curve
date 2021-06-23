@@ -41,6 +41,18 @@ using ::curve::client::FileClient;
 
 using Range = std::pair<off_t, off_t>;
 
+struct BlockDeviceStat {
+   uint64_t length;
+
+   // 0 -> FileCreated
+   // 1 -> FileDeleting
+   // 2 -> FileCloning
+   // 3 -> FileCloneMetaInstalled
+   // 4 -> FileCloned
+   // 5 -> FileBeingCloned
+   int status;
+};
+
 class BlockDeviceClient {
  public:
     BlockDeviceClient() {}
@@ -55,12 +67,33 @@ class BlockDeviceClient {
 
     /**
      * @brief Uninitailize client
+     */
+    virtual void UnInit() = 0;
+
+   /**
+     * @brief Open file specify by filename and owner
+     * @param[in] filename
+     * @param[in] owner owner for filename
      * @return error code (CURVEFS_ERROR:*)
      */
-    virtual CURVEFS_ERROR UnInit() = 0;
+    virtual CURVEFS_ERROR Open(const std::string& filename,
+                               const std::string& owner) = 0;
+
+   /**
+     * @brief Close the fd which init by Open()
+     * @return error code (CURVEFS_ERROR:*)
+     */
+    virtual CURVEFS_ERROR Close() = 0;
+
+   /**
+     * @brief Get file status
+     * @param[out] statInfo the struct for file status
+     * @return error code (CURVEFS_ERROR:*)
+     */
+    virtual CURVEFS_ERROR Stat(BlockDeviceStat* statInfo) = 0;
 
     /**
-     * @brief Read from fd which init by Init()
+     * @brief Read from fd which init by Open()
      * @param[in] buf read buffer
      * @param[in] offset read start offset
      * @param[in] length read length
@@ -70,7 +103,7 @@ class BlockDeviceClient {
     virtual CURVEFS_ERROR Read(char* buf, off_t offset, size_t length) = 0;
 
     /**
-     * @brief Write to fd which init by Init()
+     * @brief Write to fd which init by Open()
      * @param[in] buf write buffer
      * @param[in] offset write start offset
      * @param[in] length write length
@@ -78,7 +111,7 @@ class BlockDeviceClient {
      * @note the offset and length maybe not aligned
      */
     virtual CURVEFS_ERROR Write(
-       const char* buf, off_t offset, size_t length) = 0;
+        const char* buf, off_t offset, size_t length) = 0;
 };
 
 class BlockDeviceClientImpl : public BlockDeviceClient {
@@ -88,11 +121,18 @@ class BlockDeviceClientImpl : public BlockDeviceClient {
 
     BlockDeviceClientImpl() = default;
 
-    virtual ~BlockDeviceClientImpl() {}
+    ~BlockDeviceClientImpl() {}
 
     CURVEFS_ERROR Init(const BlockDeviceClientOptions& options) override;
 
-    CURVEFS_ERROR UnInit() override;
+    void UnInit() override;
+
+    CURVEFS_ERROR Open(const std::string& filename,
+                       const std::string& owner) override;
+
+    CURVEFS_ERROR Close() override;
+
+    CURVEFS_ERROR Stat(BlockDeviceStat* statInfo) override;
 
     CURVEFS_ERROR Read(char* buf, off_t offset, size_t length) override;
 
@@ -114,6 +154,10 @@ class BlockDeviceClientImpl : public BlockDeviceClient {
     uint64_t fd_;
 
     bool isOpen_;
+
+    std::string filename_;
+
+    std::string owner_;
 
     std::shared_ptr<FileClient> fileClient_;
 };

@@ -37,18 +37,18 @@ CURVEFS_ERROR BlockDeviceClientImpl::Init(
         return CURVEFS_ERROR::FAILED;
     }
 
-    std::string filename;
-    UserInfo userInfo;
-    bool succ = ::curve::client::ServiceHelper::GetUserInfoFromFilename(
-        options.volumeName, &filename, &userInfo.owner);
+    return CURVEFS_ERROR::OK;
+}
 
-    if (!succ) {
-        LOG(ERROR) << "Get user info from filename failed";
-        return CURVEFS_ERROR::FAILED;
-    }
+void BlockDeviceClientImpl::UnInit() {
+    fileClient_->UnInit();
+}
 
+CURVEFS_ERROR BlockDeviceClientImpl::Open(const std::string& filename,
+                                          const std::string& owner) {
+    UserInfo userInfo(owner_, "");
     auto retCode = fileClient_->Open(filename, userInfo, nullptr);
-    if (retCode <= 0) {
+    if (retCode < 0) {
         LOG(ERROR) << "Open file failed, filename = " << filename
                    << ", retCode = " << retCode;
         return CURVEFS_ERROR::FAILED;
@@ -56,11 +56,13 @@ CURVEFS_ERROR BlockDeviceClientImpl::Init(
 
     fd_ = retCode;
     isOpen_ = true;
+    filename_ = filename;
+    owner_ = owner;
     return CURVEFS_ERROR::OK;
 }
 
-CURVEFS_ERROR BlockDeviceClientImpl::UnInit() {
-    if (!isOpen_ || fd_ <= 0) {
+CURVEFS_ERROR BlockDeviceClientImpl::Close() {
+    if (!isOpen_ || fd_ < 0) {
         LOG(WARNING) << "File already closed";
         return CURVEFS_ERROR::BAD_FD;
     }
@@ -72,14 +74,33 @@ CURVEFS_ERROR BlockDeviceClientImpl::UnInit() {
     }
 
     isOpen_ = false;
-    fileClient_->UnInit();
+    return CURVEFS_ERROR::OK;
+}
+
+CURVEFS_ERROR BlockDeviceClientImpl::Stat(BlockDeviceStat* statInfo) {
+    if (!isOpen_ || fd_ < 0) {
+        LOG(WARNING) << "File already closed";
+        return CURVEFS_ERROR::BAD_FD;
+    }
+
+    FileStatInfo fileStatInfo;
+    UserInfo userInfo(owner_, "");
+    auto retCode = fileClient_->StatFile(filename_, userInfo, &fileStatInfo);
+    if (retCode != LIBCURVE_ERROR::OK) {
+        LOG(ERROR) << "Stat file failed, retCode = " << retCode;
+        return CURVEFS_ERROR::FAILED;
+    }
+
+    statInfo->length = fileStatInfo.length;
+    statInfo->status = fileStatInfo.fileStatus;
+
     return CURVEFS_ERROR::OK;
 }
 
 CURVEFS_ERROR BlockDeviceClientImpl::Read(char* buf,
                                           off_t offset,
                                           size_t length) {
-    if (!isOpen_ || fd_ <= 0) {
+    if (!isOpen_ || fd_ < 0) {
         return CURVEFS_ERROR::BAD_FD;
     } else if (0 == length) {
         return CURVEFS_ERROR::OK;
@@ -104,7 +125,7 @@ CURVEFS_ERROR BlockDeviceClientImpl::Read(char* buf,
 CURVEFS_ERROR BlockDeviceClientImpl::Write(const char* buf,
                                            off_t offset,
                                            size_t length) {
-    if (!isOpen_ || fd_ <= 0) {
+    if (!isOpen_ || fd_ < 0) {
         return CURVEFS_ERROR::BAD_FD;
     } else if (0 == length) {
         return CURVEFS_ERROR::OK;
@@ -159,25 +180,33 @@ CURVEFS_ERROR BlockDeviceClientImpl::WritePadding(char* writeBuffer,
 CURVEFS_ERROR BlockDeviceClientImpl::AlignRead(char* buf,
                                                off_t offset,
                                                size_t length) {
-    auto retCode = fileClient_->Read(fd_, buf, offset, length);
-    if (retCode == LIBCURVE_ERROR::OK) {
-        return CURVEFS_ERROR::OK;
+    auto ret = fileClient_->Read(fd_, buf, offset, length);
+    if (ret < 0) {
+        LOG(ERROR) << "Read file failed, retCode = " << ret;
+        return CURVEFS_ERROR::FAILED;
+    } else if (ret != length) {
+        LOG(ERROR) << "Read file failed, expect read " << length
+                   << " bytes, actual read " << ret << " bytes";
+        return CURVEFS_ERROR::FAILED;
     }
 
-    LOG(ERROR) << "Read file failed, retCode = " << retCode;
-    return CURVEFS_ERROR::FAILED;
+    return CURVEFS_ERROR::OK;
 }
 
 CURVEFS_ERROR BlockDeviceClientImpl::AlignWrite(const char* buf,
                                                 off_t offset,
                                                 size_t length) {
-    auto retCode = fileClient_->Write(fd_, buf, offset, length);
-    if (retCode == LIBCURVE_ERROR::OK) {
-        return CURVEFS_ERROR::OK;
+    auto ret = fileClient_->Write(fd_, buf, offset, length);
+    if (ret < 0) {
+        LOG(ERROR) << "Write file failed, retCode = " << ret;
+        return CURVEFS_ERROR::FAILED;
+    } else if (ret != length) {
+        LOG(ERROR) << "Write file failed, expect write " << length
+                   << " bytes, actual write " << ret << " bytes";
+        return CURVEFS_ERROR::FAILED;
     }
 
-    LOG(ERROR) << "Write file failed, retCode = " << retCode;
-    return CURVEFS_ERROR::FAILED;
+    return CURVEFS_ERROR::OK;
 }
 
 inline bool BlockDeviceClientImpl::IsAligned(off_t offset, size_t length) {
