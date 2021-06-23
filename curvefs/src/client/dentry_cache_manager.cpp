@@ -103,7 +103,16 @@ CURVEFS_ERROR DentryCacheManager::ListDentry(
         std::list<Dentry> part;
         ret = metaClient_->ListDentry(fsId_, parent, 
             last, maxListCount_, &part);
+        LOG(INFO) << "ListDentry fsId = " << fsId_
+                  << ", parent = " << parent
+                  << ", last = " << last
+                  << ", count = " << maxListCount_
+                  << ", ret = " << ret
+                  << ", part.size() = " << part.size();
         if (ret != CURVEFS_ERROR::OK) {
+            if (CURVEFS_ERROR::NOTEXIST == ret) {
+                return CURVEFS_ERROR::OK;
+            }
             LOG(ERROR) << "metaClient_ ListDentry failed, ret = " << ret
                        << ", parent = " << parent
                        << ", last = " << last

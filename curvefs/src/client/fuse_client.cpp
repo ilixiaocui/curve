@@ -36,11 +36,6 @@ using ::curvefs::mds::MountPoint;
 namespace curvefs {
 namespace client {
 
-CURVEFS_ERROR FuseClient::Init(const FuseClientOption &option) {
-    bdevOpt_ = option.bdevOpt;
-    return CURVEFS_ERROR::OK;
-}
-
 CURVEFS_ERROR FuseClient::GetMointPoint(
     const std::string &str, MountPoint *mp) {
     std::vector<std::string> items;
@@ -59,6 +54,7 @@ void FuseClient::init(void *userdata, struct fuse_conn_info *conn) {
     struct MountOption *mOpts = (struct MountOption *) userdata;
     std::string volName = mOpts->volume;
     std::string fsName = mOpts->volume;
+    std::string user = mOpts->user;
     std::string mountPointStr = mOpts->mountPoint;
 
     FsInfo fsInfo;
@@ -68,25 +64,44 @@ void FuseClient::init(void *userdata, struct fuse_conn_info *conn) {
             LOG(INFO) << "The fsName not exist, try to CreateFs"
                       << ", fsName = " << fsName;
 
-            // TODO(xuchaojie) : fix it
+            BlockDeviceStat stat;
+            ret = blockDeviceClient_->Stat(volName, user, &stat);
+            if (ret != CURVEFS_ERROR::OK) {
+                LOG(ERROR) << "Stat volume failed, ret = " << ret
+                           << ", volName = " << volName
+                           << ", user = " << user;
+                return;
+            }
+
             Volume vol;
-            vol.set_volumesize(0);
-            vol.set_blocksize(0);
+            vol.set_volumesize(stat.length);
+            // TODO(xuchaojie) : where to get block size?
+            vol.set_blocksize(4096);
             vol.set_volumename(volName);
-            vol.set_user("");
+            vol.set_user(user);
+
             ret = mdsClient_->CreateFs(fsName, 0, vol);
             if (ret != CURVEFS_ERROR::OK) {
                 LOG(ERROR) << "CreateFs failed, ret = " << ret
-                           << "fsName = " << fsName
-                           << "volName = " << volName;
+                           << ", fsName = " << fsName
+                           << ", volName = " << volName;
                 return;
             }
         } else {
             LOG(ERROR) << "GetFsInfo failed, ret = " << ret
-                       << "fsName = " << fsName;
+                       << ", fsName = " << fsName;
             return;
         }
     }
+
+    ret = blockDeviceClient_->Open(volName, user);
+    if (ret != CURVEFS_ERROR::OK) {
+        LOG(ERROR) << "BlockDeviceClientImpl open failed, ret = " << ret
+                   << ", volName = " << volName
+                   << ", user = " << user;
+        return;
+    }
+
     MountPoint mp;
     GetMointPoint(mountPointStr, &mp);
     ret = mdsClient_->MountFs(fsName, mp, &fsInfo);
@@ -99,16 +114,10 @@ void FuseClient::init(void *userdata, struct fuse_conn_info *conn) {
     fsInfo_ = std::make_shared<FsInfo>(fsInfo);
     inodeManager_->SetFsId(fsInfo.fsid());
     dentryManager_->SetFsId(fsInfo.fsid());
+
     LOG(INFO) << "Mount " << fsName
               << " on " << mountPointStr
               << " success!";
-
-    // bdevOpt_.volumeName = volName;
-    blockDeviceClient_->Init(bdevOpt_);
-    if (ret != CURVEFS_ERROR::OK) {
-        LOG(ERROR) << "Init BlockDeviceClientImpl failed, ret = " << ret;
-        return;
-    }
     return;
 }
 
@@ -126,6 +135,13 @@ void FuseClient::destroy(void *userdata) {
                    << ", mountPoint = " << mountPointStr;
         return;
     }
+
+    ret = blockDeviceClient_->Close();
+    if (ret != CURVEFS_ERROR::OK) {
+        LOG(ERROR) << "BlockDeviceClientImpl close failed, ret = " << ret;
+        return;
+    }
+
     LOG(INFO) << "Umount " << fsName
               << " on " << mountPointStr
               << " success!";
@@ -142,6 +158,15 @@ void FuseClient::GetAttrFromInode(const Inode &inode, struct stat *attr) {
     attr->st_atime = inode.atime();
     attr->st_mtime = inode.mtime();
     attr->st_ctime = inode.ctime();
+    LOG(INFO) << "GetAttrFromInode st_ino = " << attr->st_ino
+              << ", st_mode = " << attr->st_mode
+              << ", st_nlink = " << attr->st_nlink
+              << ", st_uid = " << attr->st_uid
+              << ", st_gid = " << attr->st_gid
+              << ", st_size = " << attr->st_size
+              << ", st_atime = " << attr->st_atime
+              << ", st_mtime = " << attr->st_mtime
+              << ", st_ctime = " << attr->st_ctime;
 }
 
 void FuseClient::GetDentryParamFromInode(
@@ -182,7 +207,10 @@ const uint64_t kBigFileSize = 1024 * 1024u;
 
 CURVEFS_ERROR FuseClient::write(fuse_req_t req, fuse_ino_t ino, const char *buf,
           size_t size, off_t off, struct fuse_file_info *fi, size_t *wSize) {
-    LOG(INFO) << "write";
+    LOG(INFO) << "write ino = " << ino
+              << ", size = " << size
+              << ", off = " << off
+              << ", buf = " << buf;
     Inode inode;
     CURVEFS_ERROR ret = inodeManager_->GetInode(ino, &inode);
     if (ret != CURVEFS_ERROR::OK) {
@@ -252,6 +280,7 @@ CURVEFS_ERROR FuseClient::write(fuse_req_t req, fuse_ino_t ino, const char *buf,
     if (inode.length() < off + size) {
         inode.set_length(off + size);
     }
+    LOG(INFO) << "UpdateInode inode = " << inode.DebugString();
     ret = inodeManager_->UpdateInode(inode);
     if (ret != CURVEFS_ERROR::OK) {
         LOG(ERROR) << "UpdateInode fail, ret = " << ret;
@@ -266,7 +295,9 @@ CURVEFS_ERROR FuseClient::read(fuse_req_t req,
         struct fuse_file_info *fi,
         char **buffer,
         size_t *rSize) {
-    LOG(INFO) << "read";
+    LOG(INFO) << "read ino = " << ino
+              << ", size = " << size
+              << ", off = " << off;
     Inode inode;
     CURVEFS_ERROR ret = inodeManager_->GetInode(ino, &inode);
     if (ret != CURVEFS_ERROR::OK) {
@@ -290,7 +321,7 @@ CURVEFS_ERROR FuseClient::read(fuse_req_t req,
     }
     *buffer = (char*)malloc(len * sizeof(char));
     memset(*buffer, 0, len);
-    uint64_t readLen = -1;
+    uint64_t readLen = 0;
     for (const auto &ext : pExtents) {
         if (!ext.UnWritten) {
             ret = blockDeviceClient_->Read(*buffer + readLen,
@@ -303,6 +334,7 @@ CURVEFS_ERROR FuseClient::read(fuse_req_t req,
         }
     }
     *rSize = len;
+    LOG(INFO) << "read end, read size = " << *rSize;
     return ret;
 }
 
@@ -376,7 +408,7 @@ CURVEFS_ERROR FuseClient::mkdir(fuse_req_t req, fuse_ino_t parent,
         const char *name, mode_t mode,
         fuse_entry_param *e) {
     LOG(INFO) << "mkdir";
-    return MakeNode(req, parent, name, mode, FsFileType::TYPE_DIRECTORY, e);
+    return MakeNode(req, parent, name, S_IFDIR | mode, FsFileType::TYPE_DIRECTORY, e);
 }
 
 CURVEFS_ERROR FuseClient::unlink(fuse_req_t req, fuse_ino_t parent,
@@ -452,7 +484,9 @@ CURVEFS_ERROR FuseClient::readdir(fuse_req_t req, fuse_ino_t ino, size_t size, o
         struct fuse_file_info *fi,
         char **buffer,
         size_t *rSize) {
-    LOG(INFO) << "readdir";
+    LOG(INFO) << "readdir ino = " << ino
+              << ", size = " << size
+              << ", off = " << off;
     Inode inode;
     CURVEFS_ERROR ret = inodeManager_->GetInode(ino, &inode);
     if (ret != CURVEFS_ERROR::OK) {
@@ -474,6 +508,7 @@ CURVEFS_ERROR FuseClient::readdir(fuse_req_t req, fuse_ino_t ino, size_t size, o
         for (const auto &dentry : dentryList) {
             dirbuf_add(req, bufHead, dentry);
         }
+        bufHead->wasRead = true;
     }
     if (off < bufHead->size) {
         *buffer = bufHead->p + off;
@@ -502,7 +537,7 @@ CURVEFS_ERROR FuseClient::getattr(fuse_req_t req, fuse_ino_t ino,
 
 CURVEFS_ERROR FuseClient::setattr(fuse_req_t req, fuse_ino_t ino, struct stat *attr,
         int to_set, struct fuse_file_info *fi, struct stat *attrOut) {
-    LOG(INFO) << "setattr";
+    LOG(INFO) << "setattr to_set = " << to_set;
     Inode inode;
     CURVEFS_ERROR ret = inodeManager_->GetInode(ino, &inode);
     if (ret != CURVEFS_ERROR::OK) {

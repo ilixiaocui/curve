@@ -111,6 +111,7 @@ void MetaServerBaseClient::UpdateInode(const Inode &inode,
     if (inode.has_volumeextentlist()) {
         VolumeExtentList *vlist = new VolumeExtentList;
         vlist->CopyFrom(inode.volumeextentlist());
+        request.set_allocated_volumeextentlist(vlist);
     }
     curvefs::metaserver::MetaServerService_Stub stub(channel);
     stub.UpdateInode(cntl, &request, response, nullptr);
@@ -220,8 +221,12 @@ void SpaceBaseClient::AllocExtents(uint32_t fsId,
     request.set_size(toAllocExtent.len);
     auto allochint = new curvefs::space::AllocateHint();
     allochint->set_alloctype(type);
-    allochint->set_leftoffset(toAllocExtent.pOffsetLeft);
-    allochint->set_rightoffset(toAllocExtent.pOffsetRight);
+    if (toAllocExtent.leftHintAvailable) {
+        allochint->set_leftoffset(toAllocExtent.pOffsetLeft);
+    }
+    if (toAllocExtent.rightHintAvailable) {
+        allochint->set_rightoffset(toAllocExtent.pOffsetRight);
+    }
     request.set_allocated_allochint(allochint);
     curvefs::space::SpaceAllocService_Stub stub(channel);
     stub.AllocateSpace(cntl, &request, response, nullptr);

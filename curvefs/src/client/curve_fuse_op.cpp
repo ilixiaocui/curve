@@ -41,12 +41,14 @@ using ::curvefs::client::FuseClientOption;
 using ::curvefs::client::MDSBaseClient;
 using ::curvefs::client::MetaServerBaseClient;
 using ::curvefs::client::SpaceBaseClient;
+using ::curve::client::FileClient;
 
 static FuseClient *g_ClientInstance = nullptr;
 
 int InitFuseClient(const char* confPath) {
     Configuration conf;
     conf.SetConfigPath(confPath);
+    conf.LoadConfig();
 
     // 打印参数
     conf.PrintConfig();
@@ -75,7 +77,14 @@ int InitFuseClient(const char* confPath) {
         return (int)ret;
     }
 
-    auto blockDeviceClient = std::make_shared<BlockDeviceClientImpl>();
+    auto fileClient = std::make_shared<FileClient>();
+    auto blockDeviceClient =
+        std::make_shared<BlockDeviceClientImpl>(fileClient);
+    ret = blockDeviceClient->Init(option.bdevOpt);
+    if (ret != CURVEFS_ERROR::OK) {
+        return (int)ret;
+    }
+
     auto inodeManager = std::make_shared<InodeCacheManager>(metaClient);
     auto dentryManager = std::make_shared<DentryCacheManager>(metaClient);
     auto extManager = std::make_shared<SimpleExtentManager>();
@@ -89,11 +98,10 @@ int InitFuseClient(const char* confPath) {
         extManager,
         dirBuf);
 
-    return (int)g_ClientInstance->Init(option);
+    return 0;
 }
 
 void UnInitFuseClient() {
-    g_ClientInstance->UnInit();
     delete g_ClientInstance;
 }
 
@@ -113,6 +121,9 @@ void fuse_reply_err_by_errcode(
             break;
         case CURVEFS_ERROR::NO_SPACE:
             fuse_reply_err(req, ENOSPC);
+            break;
+        case CURVEFS_ERROR::NOTEXIST:
+            fuse_reply_err(req, ENOENT);
             break;
         default:
             fuse_reply_err(req, EIO);

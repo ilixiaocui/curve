@@ -40,7 +40,13 @@ class MockBlockDeviceClient : public BlockDeviceClient {
     ~MockBlockDeviceClient() {}
 
     MOCK_METHOD1(Init, CURVEFS_ERROR(const BlockDeviceClientOptions &options));
-    MOCK_METHOD0(UnInit, CURVEFS_ERROR());
+    MOCK_METHOD0(UnInit, void());
+    MOCK_METHOD2(Open, CURVEFS_ERROR(const std::string& filename,
+                               const std::string& owner));
+    MOCK_METHOD0(Close, CURVEFS_ERROR());
+    MOCK_METHOD3(Stat, CURVEFS_ERROR(const std::string& filename,
+                               const std::string& owner,
+                               BlockDeviceStat* statInfo));
     MOCK_METHOD3(Read, CURVEFS_ERROR(char* buf, off_t offset, size_t length));
     MOCK_METHOD3(Write, CURVEFS_ERROR(
         const char* buf, off_t offset, size_t length));

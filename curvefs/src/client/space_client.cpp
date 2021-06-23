@@ -84,6 +84,8 @@ SpaceAllocServerClientImpl::AllocExtents(
             for (int i = 0; i < response.extents_size(); ++i) {
                 allocatedExtents->push_back(response.extents(i));
             }
+            cntl->Reset();
+            // TODO(lixiaocui) : set_timeout_ms(opt_.rpcTimeoutMs);
             ++iter;
         }
 

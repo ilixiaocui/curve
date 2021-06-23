@@ -199,7 +199,8 @@ CURVEFS_ERROR SimpleExtentManager::MarkExtentsWritten(
     VolumeExtentList *extents) {
     CURVEFS_ERROR ret = CURVEFS_ERROR::OK;
     VolumeExtentList newExtents;
-    for (int i = 0; i < extents->volumeextents_size() && len != 0; i++) {
+    int i = 0;
+    for (; i < extents->volumeextents_size() && len != 0; i++) {
         uint64_t lLeft = extents->volumeextents(i).fsoffset();
         uint64_t length = extents->volumeextents(i).length();
         uint64_t lRight = lLeft + length;
@@ -283,9 +284,13 @@ CURVEFS_ERROR SimpleExtentManager::MarkExtentsWritten(
                                << ret;
                     return ret;
                 }
-                break;
+                len = 0;
             }
         }
+    }
+    for (; i < extents->volumeextents_size(); i++) {
+        VolumeExtent *ext = newExtents.add_volumeextents();
+        ext->CopyFrom(extents->volumeextents(i));
     }
     extents->Swap(&newExtents);
     return CURVEFS_ERROR::OK;
@@ -360,13 +365,6 @@ CURVEFS_ERROR SimpleExtentManager::MergeToTheLastOrAdd(
         return CURVEFS_ERROR::OK;
     }
     auto last = pExtents->back();
-    if (pExt.pOffset < last.pOffset + last.len) {
-        LOG(ERROR) << "The new pExtent is overlaped, "
-                   << " poffset = " << pExt.pOffset
-                   << " is < the last extent pRight = " 
-                   << last.pOffset + last.len;
-        return CURVEFS_ERROR::FAILED;
-    }
     if (pExt.pOffset == last.pOffset + last.len) {
         if (pExt.UnWritten == last.UnWritten) {
             last.len += pExt.len;

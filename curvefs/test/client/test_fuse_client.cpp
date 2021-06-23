@@ -98,9 +98,12 @@ class TestFuseClient : public ::testing::Test {
 
 TEST_F(TestFuseClient, init_when_fs_exist) {
     MountOption mOpts;
-    mOpts.mountPoint = "LocalHost:/test";
+    mOpts.mountPoint = "host1:/test";
     mOpts.volume = "xxx";
+    mOpts.user = "test";
 
+    std::string volName = mOpts.volume;
+    std::string user = mOpts.user;
     std::string fsName = mOpts.volume;
 
     EXPECT_CALL(*mdsClient_, GetFsInfo(fsName, _))
@@ -112,6 +115,9 @@ TEST_F(TestFuseClient, init_when_fs_exist) {
     EXPECT_CALL(*mdsClient_, MountFs(fsName, _, _))
         .WillOnce(DoAll(SetArgPointee<2>(fsInfoExp),
                 Return(CURVEFS_ERROR::OK)));
+
+    EXPECT_CALL(*blockDeviceClient_, Open(volName, user))
+        .WillOnce(Return(CURVEFS_ERROR::OK));
 
     client_->init(&mOpts, nullptr);
 
@@ -126,11 +132,17 @@ TEST_F(TestFuseClient, init_when_fs_not_exist) {
     MountOption mOpts;
     mOpts.mountPoint = "host1:/test";
     mOpts.volume = "xxx";
+    mOpts.user = "test";
 
+    std::string volName = mOpts.volume;
+    std::string user = mOpts.user;
     std::string fsName = mOpts.volume;
 
     EXPECT_CALL(*mdsClient_, GetFsInfo(fsName, _))
         .WillOnce(Return(CURVEFS_ERROR::NOTEXIST));
+
+    EXPECT_CALL(*blockDeviceClient_, Stat(volName, user, _))
+        .WillOnce(Return(CURVEFS_ERROR::OK));
 
     EXPECT_CALL(*mdsClient_, CreateFs(_, _, _))
         .WillOnce(Return(CURVEFS_ERROR::OK));
@@ -141,6 +153,9 @@ TEST_F(TestFuseClient, init_when_fs_not_exist) {
     EXPECT_CALL(*mdsClient_, MountFs(fsName, _, _))
         .WillOnce(DoAll(SetArgPointee<2>(fsInfoExp),
                 Return(CURVEFS_ERROR::OK)));
+
+    EXPECT_CALL(*blockDeviceClient_, Open(volName, user))
+        .WillOnce(Return(CURVEFS_ERROR::OK));
 
     client_->init(&mOpts, nullptr);
 
@@ -159,6 +174,9 @@ TEST_F(TestFuseClient, destroy) {
     std::string fsName = mOpts.volume;
 
     EXPECT_CALL(*mdsClient_, UmountFs(fsName, _))
+        .WillOnce(Return(CURVEFS_ERROR::OK));
+
+    EXPECT_CALL(*blockDeviceClient_, Close())
         .WillOnce(Return(CURVEFS_ERROR::OK));
 
     client_->destroy(&mOpts);

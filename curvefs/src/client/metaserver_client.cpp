@@ -295,6 +295,9 @@ void MetaServerClientImpl::MetaServerStatusCode2CurveFSErr(
     case MetaStatusCode::PARAM_ERROR:
         *errcode = CURVEFS_ERROR::INVALIDPARAM;
         break;
+    case MetaStatusCode::NOT_FOUND:
+        *errcode = CURVEFS_ERROR::NOTEXIST;
+        break;
     default:
         *errcode = CURVEFS_ERROR::UNKNOWN;
         break;

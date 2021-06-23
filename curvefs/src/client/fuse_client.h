@@ -60,11 +60,6 @@ class FuseClient {
             dirBuf_(dirBuf),
             fsInfo_(nullptr) {}
 
-    CURVEFS_ERROR Init(const FuseClientOption &option);
-
-    // TODO(xuchaojie): fix uninit
-    void UnInit() {}
-
     void init(void *userdata, struct fuse_conn_info *conn);
 
     void destroy(void *userdata);
@@ -164,8 +159,6 @@ class FuseClient {
 
     // filesystem info
     std::shared_ptr<FsInfo> fsInfo_;
-
-    BlockDeviceClientOptions bdevOpt_;
 };
 
 }  // namespace client
