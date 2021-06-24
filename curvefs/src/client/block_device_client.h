@@ -70,7 +70,7 @@ class BlockDeviceClient {
      */
     virtual void UnInit() = 0;
 
-   /**
+    /**
      * @brief Open file specify by filename and owner
      * @param[in] filename
      * @param[in] owner owner for filename
@@ -79,13 +79,13 @@ class BlockDeviceClient {
     virtual CURVEFS_ERROR Open(const std::string& filename,
                                const std::string& owner) = 0;
 
-   /**
+    /**
      * @brief Close the fd which init by Open()
      * @return error code (CURVEFS_ERROR:*)
      */
     virtual CURVEFS_ERROR Close() = 0;
 
-   /**
+    /**
      * @brief Get file status
      * @param[out] statInfo the struct for file status
      * @return error code (CURVEFS_ERROR:*)

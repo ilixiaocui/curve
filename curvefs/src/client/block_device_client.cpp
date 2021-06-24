@@ -46,7 +46,7 @@ void BlockDeviceClientImpl::UnInit() {
 
 CURVEFS_ERROR BlockDeviceClientImpl::Open(const std::string& filename,
                                           const std::string& owner) {
-    UserInfo userInfo(owner_, "");
+    UserInfo userInfo(owner);
     auto retCode = fileClient_->Open(filename, userInfo, nullptr);
     if (retCode < 0) {
         LOG(ERROR) << "Open file failed, filename = " << filename
@@ -84,7 +84,7 @@ CURVEFS_ERROR BlockDeviceClientImpl::Stat(BlockDeviceStat* statInfo) {
     }
 
     FileStatInfo fileStatInfo;
-    UserInfo userInfo(owner_, "");
+    UserInfo userInfo(owner_);
     auto retCode = fileClient_->StatFile(filename_, userInfo, &fileStatInfo);
     if (retCode != LIBCURVE_ERROR::OK) {
         LOG(ERROR) << "Stat file failed, retCode = " << retCode;

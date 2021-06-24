@@ -81,18 +81,20 @@ TEST_F(BlockDeviceClientTest, TestUnInit) {
 }
 
 TEST_F(BlockDeviceClientTest, TestOpen) {
+    UserInfo userInfo("owner");
+
     // CASE 1: open return fd (-1)
-    EXPECT_CALL(*fileClient_, Open("/filename", _, _))
+    EXPECT_CALL(*fileClient_, Open("/filename", userInfo, _))
         .WillOnce(Return(-1));
     ASSERT_EQ(client_.Open("/filename", "owner"), CURVEFS_ERROR::FAILED);
 
     // CASE 2: open return fd (0)
-    EXPECT_CALL(*fileClient_, Open("/filename", _, _))
+    EXPECT_CALL(*fileClient_, Open("/filename", userInfo, _))
         .WillOnce(Return(0));
     ASSERT_EQ(client_.Open("/filename", "owner"), CURVEFS_ERROR::OK);
 
     // CASE 3: open return fd (1)
-    EXPECT_CALL(*fileClient_, Open("/filename", _, _))
+    EXPECT_CALL(*fileClient_, Open("/filename", userInfo, _))
         .WillOnce(Return(10));
     ASSERT_EQ(client_.Open("/filename", "owner"), CURVEFS_ERROR::OK);
 }
@@ -118,21 +120,22 @@ TEST_F(BlockDeviceClientTest, TestClose) {
 
 TEST_F(BlockDeviceClientTest, TestStat) {
     BlockDeviceStat stat;
+    UserInfo userInfo("owner");
 
     // CASE 1: stat failed with file not open
     ASSERT_EQ(client_.Stat(&stat), CURVEFS_ERROR::BAD_FD);
 
     // CASE 2: stat failed
-    EXPECT_CALL(*fileClient_, Open("/filename", _, _))
+    EXPECT_CALL(*fileClient_, Open("/filename", userInfo, _))
         .WillOnce(Return(10));
     ASSERT_EQ(client_.Open("/filename", "owner"), CURVEFS_ERROR::OK);
 
-    EXPECT_CALL(*fileClient_, StatFile("/filename", _, _))
+    EXPECT_CALL(*fileClient_, StatFile("/filename", userInfo, _))
         .WillOnce(Return(-LIBCURVE_ERROR::FAILED));
     ASSERT_EQ(client_.Stat(&stat), CURVEFS_ERROR::FAILED);
 
     // CASE 3: stat success
-    EXPECT_CALL(*fileClient_, StatFile("/filename", _, _))
+    EXPECT_CALL(*fileClient_, StatFile("/filename", userInfo, _))
         .WillOnce(Invoke([](const std::string& filename,
                             const UserInfo& userinfo,
                             FileStatInfo* finfo) {
