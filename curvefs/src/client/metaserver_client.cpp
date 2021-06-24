@@ -50,6 +50,13 @@ MetaServerClientImpl::Init(const MetaServerOption &metaopt,
     return CURVEFS_ERROR::OK;
 }
 
+CURVEFS_ERROR MetaServerClientImpl::Uinit() {
+    if (basecli_ != nullptr) {
+        delete basecli_;
+    }
+    return CURVEFS_ERROR::OK;
+}
+
 
 #define RPCTaskDefine                                                          \
     [&](brpc::Channel * channel, brpc::Controller * cntl) -> int

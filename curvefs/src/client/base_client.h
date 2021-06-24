@@ -127,6 +127,7 @@ class MetaServerBaseClient {
     virtual void DeleteInode(uint32_t fsId, uint64_t inodeid,
                              DeleteInodeResponse *response,
                              brpc::Controller *cntl, brpc::Channel *channel);
+
 };
 
 class MDSBaseClient {

@@ -38,8 +38,8 @@
 using ::curvefs::metaserver::Dentry;
 using ::curvefs::metaserver::FsFileType;
 using ::curvefs::metaserver::Inode;
-using ::curvefs::space::Extent;
 using ::curvefs::space::AllocateType;
+using ::curvefs::space::Extent;
 
 namespace curvefs {
 namespace client {
@@ -56,8 +56,8 @@ class MetaServerClient {
                                     const std::string &name, Dentry *out) = 0;
 
     virtual CURVEFS_ERROR ListDentry(uint32_t fsId, uint64_t inodeid,
-            const std::string &last, uint32_t count,
-            std::list<Dentry> *dentryList) = 0;
+                                     const std::string &last, uint32_t count,
+                                     std::list<Dentry> *dentryList) = 0;
 
     virtual CURVEFS_ERROR CreateDentry(const Dentry &dentry) = 0;
 
@@ -83,6 +83,7 @@ class MetaServerClientImpl : public MetaServerClient {
 
     CURVEFS_ERROR Init(const MetaServerOption &metaopt,
                        MetaServerBaseClient *baseclient);
+    CURVEFS_ERROR Uinit();
 
     CURVEFS_ERROR GetDentry(uint32_t fsId, uint64_t inodeid,
                             const std::string &name, Dentry *out) override;

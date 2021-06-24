@@ -34,9 +34,9 @@
 #include "src/client/mds_client.h"
 
 using ::curve::client::MDSClient;
+using ::curvefs::common::Volume;
 using ::curvefs::mds::FsInfo;
 using ::curvefs::mds::FSStatusCode;
-using ::curvefs::common::Volume;
 using ::curvefs::mds::MountPoint;
 
 namespace curvefs {
@@ -47,15 +47,15 @@ class MdsClient {
     MdsClient() {}
     virtual ~MdsClient() {}
 
-    virtual CURVEFS_ERROR CreateFs(const std::string &fsName, 
-        uint64_t blockSize,
-        const Volume &volume) = 0;
+    virtual CURVEFS_ERROR CreateFs(const std::string &fsName,
+                                   uint64_t blockSize,
+                                   const Volume &volume) = 0;
 
     virtual CURVEFS_ERROR DeleteFs(const std::string &fsName) = 0;
 
     virtual CURVEFS_ERROR MountFs(const std::string &fsName,
-                          const MountPoint &mountPoint,
-                          FsInfo *fsInfo) = 0;
+                                  const MountPoint &mountPoint,
+                                  FsInfo *fsInfo) = 0;
 
     virtual CURVEFS_ERROR UmountFs(const std::string &fsName,
                                    const MountPoint &mountPoint) = 0;
@@ -73,6 +73,8 @@ class MdsClientImpl : public MdsClient {
     using RPCFunc = std::function<int(brpc::Channel *, brpc::Controller *)>;
 
     CURVEFS_ERROR Init(const MdsOption &mdsOpt, MDSBaseClient *baseclient);
+
+    CURVEFS_ERROR Uinit();
 
     CURVEFS_ERROR CreateFs(const std::string &fsName, uint64_t blockSize,
                            const Volume &volume) override;

@@ -324,6 +324,7 @@ TEST_F(BaseClientTest, test_CreateFs) {
     fsinfo->set_rootinodeid(1);
     fsinfo->set_capacity(10 * 1024 * 1024L);
     fsinfo->set_blocksize(4 * 1024);
+    fsinfo->set_status(::curvefs::mds::FsStatus::INITED);
     auto vresp = new curvefs::common::Volume();
     vresp->set_volumesize(10 * 1024 * 1024L);
     vresp->set_blocksize(4 * 1024);
@@ -420,7 +421,6 @@ TEST_F(BaseClientTest, test_GetFsInfo_by_fsName) {
     brpc::Channel ch;
     ASSERT_EQ(0, ch.Init(addr_.c_str(), nullptr));
 
-
     curvefs::mds::GetFsInfoResponse response;
     auto fsinfo = new curvefs::mds::FsInfo();
     fsinfo->set_fsid(1);
@@ -428,6 +428,7 @@ TEST_F(BaseClientTest, test_GetFsInfo_by_fsName) {
     fsinfo->set_rootinodeid(1);
     fsinfo->set_capacity(10 * 1024 * 1024L);
     fsinfo->set_blocksize(4 * 1024);
+    fsinfo->set_status(::curvefs::mds::FsStatus::INITED);
     auto vresp = new curvefs::common::Volume();
     vresp->set_volumesize(10 * 1024 * 1024L);
     vresp->set_blocksize(4 * 1024);
@@ -464,6 +465,7 @@ TEST_F(BaseClientTest, test_GetFsInfo_by_fsId) {
     fsinfo->set_rootinodeid(1);
     fsinfo->set_capacity(10 * 1024 * 1024L);
     fsinfo->set_blocksize(4 * 1024);
+    fsinfo->set_status(::curvefs::mds::FsStatus::INITED);
     auto vresp = new curvefs::common::Volume();
     vresp->set_volumesize(10 * 1024 * 1024L);
     vresp->set_blocksize(4 * 1024);

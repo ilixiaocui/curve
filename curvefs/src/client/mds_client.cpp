@@ -50,6 +50,14 @@ MdsClientImpl::Init(const MdsOption &mdsOpt, MDSBaseClient *baseclient) {
     return CURVEFS_ERROR::OK;
 }
 
+CURVEFS_ERROR MdsClientImpl::Uinit() {
+    if (mdsbasecli_ != nullptr) {
+        delete mdsbasecli_;
+    }
+    return CURVEFS_ERROR::OK;
+}
+
+
 #define RPCTask [&](brpc::Channel * channel, brpc::Controller * cntl) -> int
 
 CURVEFS_ERROR MdsClientImpl::CreateFs(const std::string &fsName,
