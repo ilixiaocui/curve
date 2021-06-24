@@ -87,10 +87,14 @@ class BlockDeviceClient {
 
     /**
      * @brief Get file status
+     * @param[in] filename
+     * @param[in] owner owner for filename
      * @param[out] statInfo the struct for file status
      * @return error code (CURVEFS_ERROR:*)
      */
-    virtual CURVEFS_ERROR Stat(BlockDeviceStat* statInfo) = 0;
+    virtual CURVEFS_ERROR Stat(const std::string& filename,
+                               const std::string& owner,
+                               BlockDeviceStat* statInfo) = 0;
 
     /**
      * @brief Read from fd which init by Open()
@@ -132,7 +136,9 @@ class BlockDeviceClientImpl : public BlockDeviceClient {
 
     CURVEFS_ERROR Close() override;
 
-    CURVEFS_ERROR Stat(BlockDeviceStat* statInfo) override;
+    CURVEFS_ERROR Stat(const std::string& filename,
+                       const std::string& owner,
+                       BlockDeviceStat* statInfo) override;
 
     CURVEFS_ERROR Read(char* buf, off_t offset, size_t length) override;
 

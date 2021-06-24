@@ -122,19 +122,12 @@ TEST_F(BlockDeviceClientTest, TestStat) {
     BlockDeviceStat stat;
     UserInfo userInfo("owner");
 
-    // CASE 1: stat failed with file not open
-    ASSERT_EQ(client_.Stat(&stat), CURVEFS_ERROR::BAD_FD);
-
-    // CASE 2: stat failed
-    EXPECT_CALL(*fileClient_, Open("/filename", userInfo, _))
-        .WillOnce(Return(10));
-    ASSERT_EQ(client_.Open("/filename", "owner"), CURVEFS_ERROR::OK);
-
+    // CASE 1: stat failed
     EXPECT_CALL(*fileClient_, StatFile("/filename", userInfo, _))
         .WillOnce(Return(-LIBCURVE_ERROR::FAILED));
-    ASSERT_EQ(client_.Stat(&stat), CURVEFS_ERROR::FAILED);
+    ASSERT_EQ(client_.Stat("/filename", "owner", &stat), CURVEFS_ERROR::FAILED);
 
-    // CASE 3: stat success
+    // CASE 2: stat success
     EXPECT_CALL(*fileClient_, StatFile("/filename", userInfo, _))
         .WillOnce(Invoke([](const std::string& filename,
                             const UserInfo& userinfo,
@@ -143,7 +136,7 @@ TEST_F(BlockDeviceClientTest, TestStat) {
             finfo->fileStatus = 1;
             return LIBCURVE_ERROR::OK;
         }));
-    ASSERT_EQ(client_.Stat(&stat), CURVEFS_ERROR::OK);
+    ASSERT_EQ(client_.Stat("/filename", "owner", &stat), CURVEFS_ERROR::OK);
     ASSERT_EQ(stat.length, 1000);
     ASSERT_EQ(stat.status, 1);
 }

@@ -77,15 +77,12 @@ CURVEFS_ERROR BlockDeviceClientImpl::Close() {
     return CURVEFS_ERROR::OK;
 }
 
-CURVEFS_ERROR BlockDeviceClientImpl::Stat(BlockDeviceStat* statInfo) {
-    if (!isOpen_ || fd_ < 0) {
-        LOG(WARNING) << "File already closed";
-        return CURVEFS_ERROR::BAD_FD;
-    }
-
+CURVEFS_ERROR BlockDeviceClientImpl::Stat(const std::string& filename,
+                                          const std::string& owner,
+                                          BlockDeviceStat* statInfo) {
     FileStatInfo fileStatInfo;
-    UserInfo userInfo(owner_);
-    auto retCode = fileClient_->StatFile(filename_, userInfo, &fileStatInfo);
+    UserInfo userInfo(owner);
+    auto retCode = fileClient_->StatFile(filename, userInfo, &fileStatInfo);
     if (retCode != LIBCURVE_ERROR::OK) {
         LOG(ERROR) << "Stat file failed, retCode = " << retCode;
         return CURVEFS_ERROR::FAILED;
@@ -93,7 +90,6 @@ CURVEFS_ERROR BlockDeviceClientImpl::Stat(BlockDeviceStat* statInfo) {
 
     statInfo->length = fileStatInfo.length;
     statInfo->status = fileStatInfo.fileStatus;
-
     return CURVEFS_ERROR::OK;
 }
 
